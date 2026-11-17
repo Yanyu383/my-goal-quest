@@ -1,0 +1,2175 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GoalQuest 目標冒險島 | 無壓力每日打卡與闖關</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Nunito & Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Nunito', 'Noto Sans TC', 'sans-serif'],
+          },
+          colors: {
+            duo: {
+              green: '#58CC02',
+              greenDark: '#46A302',
+              greenLight: '#D7FFB8',
+              blue: '#1CB0F6',
+              blueDark: '#1899D6',
+              blueLight: '#DDF4FF',
+              gold: '#FFC800',
+              goldDark: '#E5A400',
+              goldLight: '#FFF5CC',
+              red: '#FF4B4B',
+              redDark: '#EA2B2B',
+              purple: '#CE82FF',
+              purpleDark: '#A568CC',
+              gray: '#E5E5E5',
+              grayDark: '#AFAFAF',
+              text: '#4B4B4B',
+              muted: '#777777',
+              bg: '#F7F7F7'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #F7F7F7;
+      color: #4B4B4B;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* 多鄰國風格立體按壓按鈕 */
+    .duo-btn {
+      transition: transform 0.08s ease, border-bottom-width 0.08s ease, filter 0.15s ease;
+    }
+    .duo-btn:active:not(:disabled) {
+      transform: translateY(4px);
+      border-bottom-width: 0px !important;
+      margin-bottom: 4px;
+    }
+
+    /* 關卡節點立體感 */
+    .node-btn {
+      box-shadow: 0 6px 0 var(--shadow-color, #46A302);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .node-btn:active {
+      transform: translateY(5px);
+      box-shadow: 0 1px 0 var(--shadow-color, #46A302);
+    }
+
+    /* 進行中關卡的「開始!」氣泡跳動動畫 */
+    @keyframes floatBounce {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+    .animate-float {
+      animation: floatBounce 1.8s ease-in-out infinite;
+    }
+
+    /* 吉祥物微幅呼吸搖擺 */
+    @keyframes mascotIdle {
+      0%, 100% { transform: rotate(-2deg) scale(1); }
+      50% { transform: rotate(2deg) scale(1.03); }
+    }
+    .animate-mascot {
+      animation: mascotIdle 3.2s ease-in-out infinite;
+    }
+
+    /* 自訂捲軸 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F0F0F0;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D0D0D0;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #B0B0B0;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col pb-24 md:pb-10">
+
+  <!-- 頂部狀態列 (Sticky Top Bar) -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b-2 border-duo-gray px-4 py-3 shadow-sm">
+    <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <!-- 品牌 Logo -->
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-xl bg-duo-green border-b-4 border-duo-greenDark flex items-center justify-center text-white font-black text-xl">
+          G
+        </div>
+        <span class="font-black text-lg sm:text-xl tracking-tight text-duo-text">GoalQuest</span>
+      </div>
+
+      <!-- 遊戲化數據列：連勝、護盾、XP等級、音效 -->
+      <div class="flex items-center gap-2 sm:gap-4">
+        <!-- 連勝天數 -->
+        <div class="flex items-center gap-1.5 bg-orange-50 border-2 border-orange-200 px-3 py-1.5 rounded-2xl" title="連續達標天數（每天完成任一小任務即算達標）">
+          <span class="text-lg">🔥</span>
+          <span id="stat-streak" class="font-black text-orange-500 text-sm sm:text-base">0</span>
+          <span class="hidden sm:inline text-xs font-bold text-orange-400">天連勝</span>
+        </div>
+
+        <!-- 冰凍護盾 -->
+        <div class="flex items-center gap-1.5 bg-duo-blueLight border-2 border-sky-200 px-3 py-1.5 rounded-2xl" title="無壓力護盾：每完成 3 個任務自動獲得 1 個，忘記打卡時自動幫你保住連勝！">
+          <span class="text-lg">🛡️</span>
+          <span id="stat-shields" class="font-black text-duo-blue text-sm sm:text-base">1</span>
+          <span class="hidden sm:inline text-xs font-bold text-sky-500">護盾</span>
+        </div>
+
+        <!-- 經驗值與等級 -->
+        <div class="flex items-center gap-1.5 bg-duo-goldLight border-2 border-amber-200 px-3 py-1.5 rounded-2xl" title="累積經驗值與冒險等級">
+          <span class="text-lg">⚡</span>
+          <span id="stat-xp" class="font-black text-amber-600 text-sm sm:text-base">0 XP</span>
+          <span id="stat-level" class="bg-duo-gold text-white text-xs font-black px-2 py-0.5 rounded-full">Lv.1</span>
+        </div>
+
+        <!-- 遊樂場代幣 -->
+        <button onclick="openArcadeModal()" class="flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 px-3 py-1.5 rounded-2xl transition cursor-pointer" title="點擊開啟獎勵遊樂場！完成目標可獲得代幣玩小遊戲或兌換獎勵">
+          <span class="text-lg">🪙</span>
+          <span id="stat-tokens" class="font-black text-duo-purpleDark text-sm sm:text-base">2</span>
+          <span class="hidden md:inline text-xs font-black text-duo-purpleDark">遊樂場</span>
+        </button>
+
+        <!-- 音效開關 -->
+        <button id="btn-sound" onclick="toggleSound()" class="p-2 rounded-2xl bg-white border-2 border-duo-gray hover:bg-gray-50 text-duo-muted transition" title="切換音效">
+          <span id="sound-icon" class="text-lg">🔊</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主內容區塊 -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 pt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- 左側／上方：吉祥物鼓勵區 & 多維度每日打卡牆 & 管理快捷 -->
+    <aside class="lg:col-span-5 flex flex-col gap-5 lg:sticky lg:top-20">
+      
+      <!-- 吉祥物無壓力鼓勵卡片 -->
+      <section class="bg-white rounded-3xl border-2 border-duo-gray p-4 sm:p-5 shadow-sm">
+        <div class="flex items-center gap-4">
+          <!-- 可愛小龍/貓頭鷹 SVG 吉祥物 -->
+          <div onclick="mascotEncourage(true)" class="cursor-pointer shrink-0 w-20 h-20 rounded-2xl bg-duo-greenLight border-2 border-duo-green/30 flex items-center justify-center animate-mascot" title="點我聽聽鼓勵的話！">
+            <svg viewBox="0 0 100 100" class="w-16 h-16">
+              <!-- 身體 -->
+              <ellipse cx="50" cy="56" rx="34" ry="36" fill="#58CC02"/>
+              <ellipse cx="50" cy="64" rx="22" ry="24" fill="#89E219"/>
+              <!-- 耳羽 -->
+              <polygon points="22,28 32,12 40,26" fill="#58CC02"/>
+              <polygon points="78,28 68,12 60,26" fill="#58CC02"/>
+              <!-- 大眼睛 -->
+              <circle cx="37" cy="44" r="11" fill="#FFFFFF"/>
+              <circle cx="63" cy="44" r="11" fill="#FFFFFF"/>
+              <circle cx="39" cy="44" r="5.5" fill="#3C3C3C"/>
+              <circle cx="61" cy="44" r="5.5" fill="#3C3C3C"/>
+              <circle cx="41" cy="42" r="2" fill="#FFFFFF"/>
+              <circle cx="63" cy="42" r="2" fill="#FFFFFF"/>
+              <!-- 嘴巴 -->
+              <polygon points="45,52 55,52 50,60" fill="#FFC800"/>
+              <!-- 腮紅 -->
+              <ellipse cx="26" cy="53" rx="4.5" ry="2.5" fill="#FF8585" opacity="0.7"/>
+              <ellipse cx="74" cy="53" rx="4.5" ry="2.5" fill="#FF8585" opacity="0.7"/>
+            </svg>
+          </div>
+          
+          <!-- 對話氣泡 -->
+          <div class="flex-1 bg-duo-bg border-2 border-duo-gray rounded-2xl p-3.5 relative">
+            <div class="text-xs font-black text-duo-green uppercase tracking-wider mb-1 flex items-center justify-between">
+              <span>小綠教練說：</span>
+              <button onclick="mascotEncourage(true)" class="text-duo-muted hover:text-duo-blue text-xs underline">換一句</button>
+            </div>
+            <p id="mascot-message" class="text-sm font-bold text-duo-text leading-relaxed">
+              就算今天只花 5 分鐘推進一點點，也是超棒的勝利！不求完美，只求開始 🌱
+            </p>
+          </div>
+        </div>
+
+        <!-- 今日微目標進度條 -->
+        <div class="mt-4 pt-3 border-t-2 border-gray-100">
+          <div class="flex justify-between items-center text-xs font-extrabold mb-1.5">
+            <span class="text-duo-muted">今日無壓力目標（完成 1 個即達標）</span>
+            <span id="today-status-badge" class="text-duo-green font-black">0 / 1 已完成</span>
+          </div>
+          <div class="w-full h-4 bg-duo-gray rounded-full overflow-hidden p-0.5">
+            <div id="today-progress-bar" class="h-full bg-duo-green rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 多維度每天的打卡牆 (Daily Check-in Wall) -->
+      <section class="bg-white rounded-3xl border-2 border-duo-gray p-4 sm:p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-2.5">
+          <div>
+            <h2 class="font-black text-base text-duo-text flex items-center gap-1.5">
+              <span>📅</span> 每天的打卡牆
+            </h2>
+            <p class="text-xs font-bold text-duo-muted">切換目標查看專屬足跡，點擊日期看明細</p>
+          </div>
+          <button onclick="manualTodayCheckIn()" class="duo-btn bg-duo-blue hover:bg-sky-400 text-white font-black text-xs px-3 py-2 rounded-xl border-b-4 border-duo-blueDark">
+            + 隨手打卡
+          </button>
+        </div>
+
+        <!-- 分目標篩選 Tabs -->
+        <div id="wall-filter-tabs" class="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2.5">
+          <!-- 由 JS 動態生成「全部總覽」與各目標分頁 -->
+        </div>
+
+        <!-- 星期標題 -->
+        <div class="grid grid-cols-7 gap-1.5 text-center text-[11px] font-extrabold text-duo-muted mb-1.5">
+          <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
+        </div>
+
+        <!-- 35 天打卡方格陣列 -->
+        <div id="checkin-wall-grid" class="grid grid-cols-7 gap-1.5">
+          <!-- 由 JS 動態生成 -->
+        </div>
+
+        <!-- 圖例說明 -->
+        <div class="mt-3 pt-2.5 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold text-duo-muted">
+          <span id="total-active-days">累積打卡：0 天</span>
+          <div class="flex items-center gap-1.5">
+            <span class="flex items-center gap-0.5"><span class="w-3 h-3 rounded bg-duo-blue/25 border border-sky-300 inline-block"></span>護盾</span>
+            <span class="flex items-center gap-0.5"><span class="w-3 h-3 rounded bg-duo-green inline-block"></span>達標</span>
+            <span class="flex items-center gap-0.5"><span class="w-3 h-3 rounded bg-gradient-to-br from-amber-300 to-duo-gold border border-duo-goldDark inline-block"></span>超額👑</span>
+          </div>
+        </div>
+
+        <!-- 選中日期的獨立紀錄明細面板 -->
+        <div id="selected-day-details" class="mt-3 pt-3 border-t-2 border-dashed border-duo-gray">
+          <!-- 由 JS 動態渲染當天每一個目標的完成紀錄 -->
+        </div>
+      </section>
+
+      <!-- 管理、遊樂場與備份按鈕群 -->
+      <section class="grid grid-cols-2 gap-2.5">
+        <button onclick="openManagerModal()" class="duo-btn bg-duo-green hover:bg-lime-500 text-white font-black py-3 px-3.5 rounded-2xl border-b-4 border-duo-greenDark flex items-center justify-center gap-1.5 text-xs sm:text-sm shadow-sm">
+          <span>✏️</span> 輸入 / 更改目標
+        </button>
+        <button onclick="openArcadeModal()" class="duo-btn bg-duo-purple hover:bg-purple-400 text-white font-black py-3 px-3.5 rounded-2xl border-b-4 border-duo-purpleDark flex items-center justify-center gap-1.5 text-xs sm:text-sm shadow-sm">
+          <span>🎮</span> 小遊戲與獎勵
+        </button>
+        <button onclick="openBackupModal()" class="col-span-2 duo-btn bg-white hover:bg-gray-50 text-duo-text font-black py-2.5 px-4 rounded-2xl border-2 border-b-4 border-duo-gray flex items-center justify-center gap-2 text-xs shadow-sm">
+          <span>💾</span> 備份 / 還原存檔 (GitHub 跨裝置同步)
+        </button>
+      </section>
+    </aside>
+
+    <!-- 右側／下方：多鄰國風格蜿蜒關卡地圖 (Winding Pathway) -->
+    <section class="lg:col-span-7 bg-white rounded-3xl border-2 border-duo-gray p-5 sm:p-8 shadow-sm min-h-[540px] flex flex-col items-center relative overflow-hidden">
+      
+      <!-- 頂部單元橫幅 (Unit Banner) -->
+      <div class="w-full bg-duo-green rounded-2xl border-b-4 border-duo-greenDark p-4 text-white flex items-center justify-between mb-8 shadow-sm">
+        <div>
+          <div class="text-xs font-extrabold uppercase tracking-wider opacity-90">CURRENT QUEST • 冒險地圖</div>
+          <h1 id="quest-board-title" class="text-lg sm:text-xl font-black mt-0.5">我的無壓力成長之旅</h1>
+        </div>
+        <button onclick="openManagerModal()" class="bg-white/20 hover:bg-white/30 text-white font-extrabold text-xs px-3 py-2 rounded-xl backdrop-blur-sm transition">
+          編輯關卡
+        </button>
+      </div>
+
+      <!-- 關卡節點容器 -->
+      <div id="pathway-container" class="w-full max-w-md flex flex-col items-center gap-7 py-4 relative">
+        <!-- 由 JS 動態生成蜿蜒關卡節點 -->
+      </div>
+
+      <!-- 地圖底部新增快捷按鈕 -->
+      <div class="mt-8 pt-4 border-t-2 border-dashed border-duo-gray w-full max-w-md flex flex-col items-center">
+        <button onclick="openManagerModal(true)" class="duo-btn bg-duo-blueLight hover:bg-sky-100 text-duo-blue font-black text-sm px-6 py-3 rounded-2xl border-2 border-b-4 border-sky-300 flex items-center gap-2">
+          <span>➕</span> 新增下一個微目標關卡
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== 彈窗 1：點擊關卡執行打卡（支援基準 vs. 超額完成） ==================== -->
+  <div id="node-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-3xl border-2 border-duo-gray max-w-md w-full p-6 shadow-2xl transform transition-all max-h-[92vh] overflow-y-auto">
+      <div class="flex justify-between items-start mb-3">
+        <span id="modal-node-badge" class="bg-duo-greenLight text-duo-greenDark text-xs font-black px-3 py-1 rounded-full">
+          進行中關卡
+        </span>
+        <button onclick="closeModal('node-modal')" class="text-duo-muted hover:text-duo-text font-black text-xl leading-none px-2">✕</button>
+      </div>
+
+      <div class="flex flex-col items-center text-center my-1">
+        <div id="modal-node-icon" class="w-16 h-16 rounded-3xl bg-duo-goldLight border-b-4 border-duo-goldDark flex items-center justify-center text-3xl mb-3 shadow-sm">
+          🎯
+        </div>
+        <h3 id="modal-node-title" class="text-xl font-black text-duo-text mb-1">目標名稱</h3>
+        <p id="modal-node-desc" class="text-xs font-bold text-duo-muted bg-duo-bg px-3.5 py-2 rounded-xl w-full border border-duo-gray">
+          目標描述內容...
+        </p>
+      </div>
+
+      <!-- 基準 vs 超額完成選擇區 -->
+      <div class="my-4 bg-duo-bg p-4 rounded-2xl border-2 border-duo-gray space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-black text-duo-text">本次實際完成量</span>
+          <span id="modal-multiplier-tag" class="bg-duo-greenLight text-duo-greenDark text-xs font-black px-2.5 py-0.5 rounded-full">
+            1.0x 剛好達標
+          </span>
+        </div>
+
+        <!-- 快速倍率按鈕 -->
+        <div class="grid grid-cols-4 gap-1.5">
+          <button type="button" onclick="setCheckInMultiplier(1)" class="mult-btn bg-white border-2 border-duo-green text-duo-greenDark font-black text-xs py-2 rounded-xl transition" data-mult="1">
+            1x<br><span class="text-[10px] font-bold">基準</span>
+          </button>
+          <button type="button" onclick="setCheckInMultiplier(1.5)" class="mult-btn bg-white border-2 border-duo-gray text-duo-text font-black text-xs py-2 rounded-xl transition" data-mult="1.5">
+            1.5x<br><span class="text-[10px] font-bold">多做點</span>
+          </button>
+          <button type="button" onclick="setCheckInMultiplier(2)" class="mult-btn bg-white border-2 border-duo-gray text-duo-text font-black text-xs py-2 rounded-xl transition" data-mult="2">
+            2x<br><span class="text-[10px] font-bold">雙倍棒</span>
+          </button>
+          <button type="button" onclick="setCheckInMultiplier(4)" class="mult-btn bg-white border-2 border-duo-gray text-duo-text font-black text-xs py-2 rounded-xl transition" data-mult="4">
+            4x<br><span class="text-[10px] font-bold">超爆發</span>
+          </button>
+        </div>
+
+        <!-- 自訂實際數值輸入 -->
+        <div class="flex items-center gap-2">
+          <div class="flex-1">
+            <label class="block text-[11px] font-extrabold text-duo-muted mb-1">
+              基準門檻：<span id="modal-base-amount-label" class="text-duo-text">5 分鐘</span>
+            </label>
+            <div class="flex items-center bg-white border-2 border-duo-gray focus-within:border-duo-blue rounded-xl px-3 py-1.5">
+              <input id="modal-actual-amount" type="number" min="0.5" step="0.5" value="5" oninput="onActualAmountInput()" class="w-full font-black text-base text-duo-text outline-none" />
+              <span id="modal-unit-label" class="text-xs font-black text-duo-muted shrink-0 ml-1">分鐘</span>
+            </div>
+          </div>
+          <div class="bg-amber-50 border-2 border-amber-200 rounded-xl px-3 py-2 text-center shrink-0">
+            <div class="text-[10px] font-extrabold text-amber-600">預計獲得</div>
+            <div class="font-black text-sm text-amber-600">+<span id="modal-calc-xp">20</span> XP</div>
+            <div class="text-[10px] font-black text-duo-purpleDark">+1 🪙代幣</div>
+          </div>
+        </div>
+
+        <!-- 心得 / 紀錄短句 -->
+        <div>
+          <input id="modal-checkin-note" type="text" placeholder="寫一句今天的小心得（選填，例如：讀得很順多看了15分鐘！）" class="w-full bg-white border-2 border-duo-gray focus:border-duo-blue rounded-xl px-3 py-2 text-xs font-bold text-duo-text outline-none" />
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2.5">
+        <button id="modal-complete-btn" onclick="completeCurrentNode()" class="duo-btn w-full bg-duo-green hover:bg-lime-500 text-white font-black text-base py-3.5 rounded-2xl border-b-4 border-duo-greenDark shadow-sm">
+          🎉 完成打卡！開啟小獎勵
+        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="editFromNodeModal()" class="duo-btn bg-white hover:bg-gray-50 text-duo-text font-extrabold text-xs py-2.5 rounded-xl border-2 border-b-4 border-duo-gray">
+            ✏️ 修改此目標
+          </button>
+          <button id="modal-toggle-status-btn" onclick="toggleNodeCompletedState()" class="duo-btn bg-white hover:bg-gray-50 text-duo-muted font-extrabold text-xs py-2.5 rounded-xl border-2 border-b-4 border-duo-gray">
+            重設關卡狀態
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈窗 2：輸入與更改目標管理 Modal ==================== -->
+  <div id="manager-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-3xl border-2 border-duo-gray max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b-2 border-duo-gray flex items-center justify-between bg-duo-bg">
+        <div>
+          <h3 class="text-lg font-black text-duo-text">✏️ 輸入與更改你的目標關卡</h3>
+          <p class="text-xs font-bold text-duo-muted">設定輕鬆的「基準微門檻」，做超過時系統會自動幫你紀錄成超額金星！</p>
+        </div>
+        <button onclick="closeModal('manager-modal')" class="text-duo-muted hover:text-duo-text font-black text-xl px-2">✕</button>
+      </div>
+
+      <!-- Body (可捲動) -->
+      <div class="p-6 overflow-y-auto flex-1 space-y-6">
+        
+        <!-- 冒險地圖總標題設定 -->
+        <div class="bg-duo-bg p-4 rounded-2xl border-2 border-duo-gray">
+          <label class="block text-xs font-black text-duo-muted uppercase mb-1.5">冒險地圖總標題</label>
+          <div class="flex gap-2">
+            <input id="input-board-title" type="text" placeholder="例如：2026 英文與健康微習慣" class="flex-1 bg-white border-2 border-duo-gray focus:border-duo-blue outline-none rounded-xl px-3.5 py-2 text-sm font-bold text-duo-text" />
+            <button onclick="saveBoardTitle()" class="duo-btn bg-duo-blue text-white font-black text-xs px-4 py-2 rounded-xl border-b-4 border-duo-blueDark">
+              更新標題
+            </button>
+          </div>
+        </div>
+
+        <!-- 新增 / 編輯單一關卡表單 -->
+        <div id="goal-form-box" class="bg-duo-greenLight/40 p-4 rounded-2xl border-2 border-duo-green/40 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 id="form-mode-title" class="font-black text-sm text-duo-greenDark">➕ 新增目標關卡</h4>
+            <button id="btn-cancel-edit" onclick="resetGoalForm()" class="hidden text-xs font-bold text-duo-muted underline">取消編輯</button>
+          </div>
+          
+          <input type="hidden" id="edit-goal-id" value="" />
+
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <!-- 圖示選擇 -->
+            <div>
+              <label class="block text-xs font-extrabold text-duo-text mb-1">關卡圖示</label>
+              <select id="input-goal-icon" class="w-full bg-white border-2 border-duo-gray rounded-xl px-3 py-2 text-lg font-bold outline-none focus:border-duo-green">
+                <option value="🎯">🎯 目標</option>
+                <option value="📖">📖 閱讀</option>
+                <option value="💻">💻 程式</option>
+                <option value="🗣️">🗣️ 語言</option>
+                <option value="🏃">🏃 運動</option>
+                <option value="💧">💧 喝水</option>
+                <option value="🧘">🧘 冥想</option>
+                <option value="🎨">🎨 創作</option>
+                <option value="💰">💰 理財</option>
+                <option value="🌟">🌟 習慣</option>
+              </select>
+            </div>
+
+            <!-- 關卡標題 -->
+            <div class="sm:col-span-3">
+              <label class="block text-xs font-extrabold text-duo-text mb-1">目標名稱（建議簡短具體）</label>
+              <input id="input-goal-title" type="text" placeholder="例如：每日輕鬆閱讀、伸展運動" class="w-full bg-white border-2 border-duo-gray rounded-xl px-3.5 py-2 text-sm font-bold outline-none focus:border-duo-green" />
+            </div>
+          </div>
+
+          <!-- 基準目標量、單位與基礎 XP -->
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-extrabold text-duo-text mb-1">基準微門檻</label>
+              <input id="input-goal-base" type="number" min="1" step="1" value="5" class="w-full bg-white border-2 border-duo-gray rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-duo-green" />
+            </div>
+            <div>
+              <label class="block text-xs font-extrabold text-duo-text mb-1">計算單位</label>
+              <input id="input-goal-unit" type="text" value="分鐘" placeholder="分鐘/頁/次" class="w-full bg-white border-2 border-duo-gray rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-duo-green" />
+            </div>
+            <div>
+              <label class="block text-xs font-extrabold text-duo-text mb-1">基礎 XP</label>
+              <select id="input-goal-xp" class="w-full bg-white border-2 border-duo-gray rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-duo-green">
+                <option value="15">15 XP (超輕鬆)</option>
+                <option value="20" selected>20 XP (標準微目標)</option>
+                <option value="30">30 XP (進階專注)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 無壓力小提示 / 備註 -->
+          <div>
+            <label class="block text-xs font-extrabold text-duo-text mb-1">無壓力行動步驟 / 鼓勵備註</label>
+            <input id="input-goal-desc" type="text" placeholder="例如：平常只要閱讀 5 分鐘就算過關，有精神再多看！" class="w-full bg-white border-2 border-duo-gray rounded-xl px-3.5 py-2 text-sm font-bold outline-none focus:border-duo-green" />
+          </div>
+
+          <button onclick="submitGoalForm()" id="btn-submit-goal" class="duo-btn w-full bg-duo-green hover:bg-lime-500 text-white font-black text-sm py-3 rounded-xl border-b-4 border-duo-greenDark">
+            加入冒險地圖
+          </button>
+        </div>
+
+        <!-- 現有關卡列表（可編輯、上下移動、刪除） -->
+        <div>
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <h4 class="font-black text-sm text-duo-text">📋 現有關卡清單（由上而下依序闖關）</h4>
+            <div class="flex gap-2">
+              <button onclick="loadTemplate('habit')" class="text-xs font-extrabold text-duo-blue hover:underline">載入健康微習慣範本</button>
+              <span class="text-duo-gray">|</span>
+              <button onclick="loadTemplate('study')" class="text-xs font-extrabold text-duo-purple hover:underline">載入學習成長範本</button>
+            </div>
+          </div>
+          
+          <div id="manager-goals-list" class="space-y-2">
+            <!-- 由 JS 動態渲染 -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-3.5 border-t-2 border-duo-gray bg-duo-bg flex justify-end">
+        <button onclick="closeModal('manager-modal')" class="duo-btn bg-duo-blue text-white font-black text-sm px-6 py-2.5 rounded-xl border-b-4 border-duo-blueDark">
+          完成設定
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈窗 3：完成目標後的「幸運獎勵抽獎 / 遊樂場」Modal ==================== -->
+  <div id="arcade-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-3xl border-2 border-duo-gray max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b-2 border-duo-gray flex items-center justify-between bg-purple-50">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">🎪</span>
+          <div>
+            <h3 class="text-lg font-black text-duo-text">無壓力獎勵遊樂場</h3>
+            <p class="text-xs font-bold text-duo-purpleDark">每完成 1 個小目標就送代幣！放鬆玩小遊戲或兌換現實獎勵</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="bg-white border-2 border-purple-200 px-3 py-1 rounded-xl font-black text-sm text-duo-purpleDark">
+            🪙 <span id="arcade-token-count">0</span> 枚
+          </div>
+          <button onclick="closeArcadeModal()" class="text-duo-muted hover:text-duo-text font-black text-xl px-2">✕</button>
+        </div>
+      </div>
+
+      <!-- 遊樂場分頁切換 -->
+      <div class="flex border-b-2 border-duo-gray bg-duo-bg px-4 pt-2 gap-2 overflow-x-auto">
+        <button onclick="switchArcadeTab('chest')" id="tab-arcade-chest" class="arcade-tab px-4 py-2.5 rounded-t-xl font-black text-xs sm:text-sm bg-white text-duo-purpleDark border-t-2 border-x-2 border-duo-gray">
+          🎁 幸運扭蛋機
+        </button>
+        <button onclick="switchArcadeTab('stars')" id="tab-arcade-stars" class="arcade-tab px-4 py-2.5 rounded-t-xl font-black text-xs sm:text-sm text-duo-muted hover:text-duo-text">
+          ⭐ 接星星大作戰
+        </button>
+        <button onclick="switchArcadeTab('memory')" id="tab-arcade-memory" class="arcade-tab px-4 py-2.5 rounded-t-xl font-black text-xs sm:text-sm text-duo-muted hover:text-duo-text">
+          🃏 治癒翻翻樂
+        </button>
+        <button onclick="switchArcadeTab('rewards')" id="tab-arcade-rewards" class="arcade-tab px-4 py-2.5 rounded-t-xl font-black text-xs sm:text-sm text-duo-muted hover:text-duo-text">
+          🧋 自訂現實獎勵
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6 overflow-y-auto flex-1">
+        
+        <!-- 分頁 1：幸運扭蛋機與貼紙圖鑑 -->
+        <div id="panel-arcade-chest" class="arcade-panel space-y-5">
+          <div class="bg-gradient-to-b from-amber-50 to-purple-50 border-2 border-amber-200 rounded-3xl p-6 text-center">
+            <div id="gacha-capsule" class="text-6xl mb-3 inline-block transition-transform duration-500">🎁</div>
+            <h4 id="gacha-result-title" class="font-black text-lg text-duo-text">轉一顆無壓力幸運扭蛋！</h4>
+            <p id="gacha-result-desc" class="text-xs font-bold text-duo-muted mt-1 mb-4">有機會抽中可愛動物貼紙、額外 XP、連勝護盾或暖心金句！</p>
+            <button onclick="playGacha()" class="duo-btn bg-duo-gold hover:bg-amber-400 text-amber-950 font-black text-sm px-6 py-3 rounded-2xl border-b-4 border-duo-goldDark">
+              🎰 消耗 1 🪙 轉扭蛋
+            </button>
+          </div>
+
+          <div>
+            <h5 class="font-black text-xs text-duo-muted uppercase mb-2">✨ 我的可愛貼紙收藏櫃 (<span id="sticker-count">0</span> / 12)</h5>
+            <div id="sticker-collection-grid" class="grid grid-cols-6 gap-2">
+              <!-- JS 動態生成 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 分頁 2：接星星小遊戲 (15秒無壓力小遊戲) -->
+        <div id="panel-arcade-stars" class="arcade-panel hidden space-y-3 text-center">
+          <div class="flex items-center justify-between bg-duo-bg px-4 py-2 rounded-2xl border border-duo-gray text-xs font-black">
+            <span>剩餘時間：<span id="star-game-time" class="text-duo-red">15</span> 秒</span>
+            <span>得分：<span id="star-game-score" class="text-duo-goldDark">0</span> 分</span>
+            <button onclick="startStarGame()" id="btn-start-star-game" class="duo-btn bg-duo-blue text-white px-3 py-1.5 rounded-xl border-b-4 border-duo-blueDark">
+              ▶️ 消耗 1 🪙 開始玩
+            </button>
+          </div>
+          <div class="relative w-full max-w-md mx-auto rounded-2xl overflow-hidden border-2 border-duo-gray bg-slate-900">
+            <canvas id="star-canvas" width="400" height="260" class="w-full h-60 block cursor-pointer touch-none"></canvas>
+            <div id="star-game-overlay" class="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center text-white p-4">
+              <div class="text-4xl mb-2">🌠</div>
+              <p class="font-black text-base">左右移動小籃子接住星星！</p>
+              <p class="text-xs text-slate-300 mt-1">滑鼠移動或手指滑動皆可，每接一顆 +5 分，結束換算 XP 獎勵！</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 分頁 3：記憶翻翻樂 (3x4 輕鬆配對) -->
+        <div id="panel-arcade-memory" class="arcade-panel hidden space-y-3 text-center">
+          <div class="flex items-center justify-between bg-duo-bg px-4 py-2 rounded-2xl border border-duo-gray text-xs font-black">
+            <span>配對進度：<span id="memory-pairs" class="text-duo-green">0</span> / 6 組</span>
+            <button onclick="startMemoryGame()" class="duo-btn bg-duo-green text-white px-3 py-1.5 rounded-xl border-b-4 border-duo-greenDark">
+              🔄 消耗 1 🪙 開新局
+            </button>
+          </div>
+          <div id="memory-grid" class="grid grid-cols-4 gap-2.5 max-w-sm mx-auto pt-2">
+            <!-- JS 動態生成 12 張卡片 -->
+          </div>
+        </div>
+
+        <!-- 分頁 4：自訂現實生活小獎勵兌換 -->
+        <div id="panel-arcade-rewards" class="arcade-panel hidden space-y-4">
+          <div class="flex gap-2">
+            <input id="input-custom-reward" type="text" placeholder="輸入給自己的小獎勵（例如：無罪惡感追劇 30 分鐘、喝珍奶）" class="flex-1 bg-duo-bg border-2 border-duo-gray rounded-xl px-3.5 py-2 text-xs font-bold outline-none focus:border-duo-purple" />
+            <select id="input-reward-cost" class="bg-duo-bg border-2 border-duo-gray rounded-xl px-2.5 py-2 text-xs font-black outline-none">
+              <option value="2">2 🪙</option>
+              <option value="3" selected>3 🪙</option>
+              <option value="5">5 🪙</option>
+              <option value="10">10 🪙</option>
+            </select>
+            <button onclick="addCustomReward()" class="duo-btn bg-duo-purple text-white font-black text-xs px-4 py-2 rounded-xl border-b-4 border-duo-purpleDark shrink-0">
+              新增
+            </button>
+          </div>
+
+          <div id="custom-rewards-list" class="space-y-2">
+            <!-- JS 動態生成現實獎勵清單 -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 彈窗 4：備份與還原存檔 Modal ==================== -->
+  <div id="backup-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-3xl border-2 border-duo-gray max-w-md w-full p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="text-lg font-black text-duo-text">💾 存檔備份與跨裝置同步</h3>
+        <button onclick="closeModal('backup-modal')" class="text-duo-muted hover:text-duo-text font-black text-xl px-2">✕</button>
+      </div>
+      <p class="text-xs font-bold text-duo-muted mb-4 leading-relaxed">
+        你的所有目標與打卡紀錄都自動儲存在目前瀏覽器中。若要在手機與電腦之間同步，可複製下方 JSON 存檔代碼或匯出檔案。
+      </p>
+
+      <textarea id="backup-json-area" rows="5" class="w-full bg-duo-bg border-2 border-duo-gray rounded-2xl p-3 text-xs font-mono text-duo-text outline-none focus:border-duo-blue mb-3" placeholder="這裡會顯示你的存檔 JSON..."></textarea>
+
+      <div class="grid grid-cols-2 gap-2.5 mb-3">
+        <button onclick="copyBackupJSON()" class="duo-btn bg-duo-blue text-white font-black text-xs py-3 rounded-xl border-b-4 border-duo-blueDark">
+          📋 複製存檔代碼
+        </button>
+        <button onclick="downloadBackupFile()" class="duo-btn bg-duo-green text-white font-black text-xs py-3 rounded-xl border-b-4 border-duo-greenDark">
+          ⬇️ 下載 .json 備份
+        </button>
+      </div>
+
+      <button onclick="importBackupJSON()" class="duo-btn w-full bg-duo-gold text-amber-950 font-black text-xs py-3 rounded-xl border-b-4 border-duo-goldDark">
+        📥 從上方代碼還原進度
+      </button>
+
+      <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+        <span class="text-[11px] font-bold text-duo-muted">想要重新開始冒險？</span>
+        <button onclick="confirmResetAll()" class="text-xs font-black text-duo-red hover:underline">重置所有資料</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 輕量提示吐司 (Toast Message) ==================== -->
+  <div id="toast-container" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none w-full max-w-sm px-4"></div>
+
+  <script>
+    // ==================== 1. 狀態與預設資料管理 ====================
+    const STORAGE_KEY = 'goalquest_duolingo_v2';
+
+    const ENCOURAGEMENTS = [
+      "就算今天只花 5 分鐘推進一點點，也是超棒的勝利！不求完美，只求開始 🌱",
+      "如果精神不錯多做了一點，系統會幫你記上超額金星 👑；只想做基準量也 100 分！",
+      "累了就休息一天吧！你的連勝護盾隨時準備好保護你 🛡️",
+      "完成比完美更重要！每次打卡還能拿遊樂場代幣去轉扭蛋喔 🎁",
+      "每一次點擊打卡，都在幫未來的自己累積能量 ⚡",
+      "沒有壓力、沒有罪惡感，這裡只有屬於你的小小冒險地圖 🗺️"
+    ];
+
+    const ALL_STICKERS = [
+      { id: 's1', icon: '🦉', name: '博學小貓頭鷹' },
+      { id: 's2', icon: '🦖', name: '元氣小恐龍' },
+      { id: 's3', icon: '🦊', name: '靈感小狐狸' },
+      { id: 's4', icon: '🐼', name: 'Chill 熊貓' },
+      { id: 's5', icon: '🦄', name: '奇蹟獨角獸' },
+      { id: 's6', icon: '🐙', name: '多工小章魚' },
+      { id: 's7', icon: '🐧', name: '企鵝探險家' },
+      { id: 's8', icon: '🐝', name: '勤勞小蜜蜂' },
+      { id: 's9', icon: '🐢', name: '穩健小烏龜' },
+      { id: 's10', icon: '🐳', name: '深海藍鯨' },
+      { id: 's11', icon: '🚀', name: '突破小火箭' },
+      { id: 's12', icon: '👑', name: '無壓力王者' }
+    ];
+
+    const DEFAULT_STATE = {
+      boardTitle: "我的無壓力每日微習慣",
+      xp: 85,
+      shields: 1,
+      tokens: 3, // 遊樂場代幣
+      tasksCompletedTowardsShield: 1,
+      soundEnabled: true,
+      lastCheckInDate: null,
+      streak: 0,
+      unlockedStickers: ['s1', 's9'],
+      customRewards: [
+        { id: 'r1', title: '無罪惡感追劇 / 滑手機 30 分鐘', cost: 2 },
+        { id: 'r2', title: '買一杯喜歡的飲料或甜點獎勵自己', cost: 4 },
+        { id: 'r3', title: '週末睡到自然醒賴床券', cost: 5 }
+      ],
+      // checkInHistory: {
+      //   '2026-11-18': {
+      //     shielded: false,
+      //     entries: [
+      //       { id: 'e1', goalId: 'g2', goalTitle: '每日輕鬆閱讀', icon: '📖', baseAmount: 5, actualAmount: 20, unit: '分鐘', multiplier: 4, xp: 60, note: '書太好看了不知不覺讀了20分鐘！', time: '09:30' }
+      //     ]
+      //   }
+      // }
+      checkInHistory: {},
+      goals: [
+        {
+          id: 'g1',
+          icon: '💧',
+          title: '喝一杯溫開水',
+          desc: '起床或工作前喝 250ml 水，最輕鬆的第一步！',
+          baseAmount: 250,
+          unit: 'ml',
+          xp: 15,
+          completed: true
+        },
+        {
+          id: 'g2',
+          icon: '📖',
+          title: '每日輕鬆閱讀',
+          desc: '平常只要閱讀 5 分鐘就算達標，精神好再多看！',
+          baseAmount: 5,
+          unit: '分鐘',
+          xp: 20,
+          completed: true
+        },
+        {
+          id: 'g3',
+          icon: '🏃',
+          title: '起身伸展與運動',
+          desc: '離開螢幕動一動 5 分鐘，讓大腦重新充氧。',
+          baseAmount: 5,
+          unit: '分鐘',
+          xp: 20,
+          completed: false
+        },
+        {
+          id: 'g4',
+          icon: '💻',
+          title: '推進核心專案進度',
+          desc: '打開專案或筆記，寫下一小段進度就好。',
+          baseAmount: 15,
+          unit: '分鐘',
+          xp: 30,
+          completed: false
+        },
+        {
+          id: 'g5',
+          icon: '🌟',
+          title: '寫下今日感恩小事',
+          desc: '肯定自己的努力，安心睡個好覺！',
+          baseAmount: 1,
+          unit: '件',
+          xp: 15,
+          completed: false
+        }
+      ]
+    };
+
+    let state = loadState();
+    let activeModalNodeId = null;
+    let selectedWallFilter = 'ALL'; // 'ALL' 或 goalId
+    let selectedWallDate = getTodayStr(0);
+
+    // 取得當地日期字串 YYYY-MM-DD
+    function getTodayStr(offsetDays = 0) {
+      const d = new Date();
+      d.setDate(d.getDate() + offsetDays);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          const initial = JSON.parse(JSON.stringify(DEFAULT_STATE));
+          const yesterday = getTodayStr(-1);
+          const today = getTodayStr(0);
+          
+          // 昨天示範基準達標
+          initial.checkInHistory[yesterday] = {
+            shielded: false,
+            entries: [
+              { id: 'init_1', goalId: 'g1', goalTitle: '喝一杯溫開水', icon: '💧', baseAmount: 250, actualAmount: 250, unit: 'ml', multiplier: 1, xp: 15, note: '準時喝水達標', time: '08:30' }
+            ]
+          };
+          // 今天示範超額完成（閱讀 20 分鐘 vs 基準 5 分鐘）
+          initial.checkInHistory[today] = {
+            shielded: false,
+            entries: [
+              { id: 'init_2', goalId: 'g2', goalTitle: '每日輕鬆閱讀', icon: '📖', baseAmount: 5, actualAmount: 20, unit: '分鐘', multiplier: 4, xp: 60, note: '原本只想看5分鐘，結果太精彩一口氣讀了20分鐘！', time: '10:15' }
+            ]
+          };
+          initial.streak = 2;
+          initial.lastCheckInDate = today;
+          return initial;
+        }
+        const parsed = JSON.parse(raw);
+        // 相容舊版紀錄格式轉換
+        if (parsed.checkInHistory) {
+          Object.keys(parsed.checkInHistory).forEach(k => {
+            if (!Array.isArray(parsed.checkInHistory[k].entries)) {
+              const cnt = parsed.checkInHistory[k].count || 0;
+              parsed.checkInHistory[k].entries = cnt > 0 ? [{
+                id: 'legacy_' + k,
+                goalId: 'MANUAL',
+                goalTitle: '隨手微目標打卡',
+                icon: '✅',
+                baseAmount: 1,
+                actualAmount: cnt,
+                unit: '次',
+                multiplier: cnt > 1 ? cnt : 1,
+                xp: cnt * 15,
+                note: '',
+                time: ''
+              }] : [];
+            }
+          });
+        }
+        return { ...DEFAULT_STATE, ...parsed };
+      } catch (e) {
+        console.error('讀取存檔失敗:', e);
+        return JSON.parse(JSON.stringify(DEFAULT_STATE));
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.error('儲存失敗:', e);
+      }
+    }
+
+    // ==================== 2. 無壓力連勝與護盾自動計算 ====================
+    function hasActiveEntries(dayRecord) {
+      return dayRecord && Array.isArray(dayRecord.entries) && dayRecord.entries.length > 0;
+    }
+
+    function evaluateStreakAndShields() {
+      const today = getTodayStr(0);
+      const yesterday = getTodayStr(-1);
+
+      if (hasActiveEntries(state.checkInHistory[today]) || hasActiveEntries(state.checkInHistory[yesterday])) {
+        recalculateStreakFromHistory();
+        return;
+      }
+
+      if (state.streak > 0 && state.lastCheckInDate && state.lastCheckInDate < yesterday) {
+        const lastDate = new Date(state.lastCheckInDate);
+        const nowDate = new Date(today);
+        const diffDays = Math.floor((nowDate - lastDate) / (1000 * 60 * 60 * 24)) - 1;
+
+        if (diffDays > 0 && state.shields >= diffDays) {
+          state.shields -= diffDays;
+          for (let i = 1; i <= diffDays; i++) {
+            const missedDate = getTodayStr(-i);
+            state.checkInHistory[missedDate] = { entries: [], shielded: true };
+          }
+          saveState();
+          showToast(`🛡️ 連勝護盾已自動啟動，幫你保住了 ${state.streak} 天連勝！`, 'info');
+        } else if (diffDays > 0) {
+          state.streak = 0;
+          saveState();
+        }
+      }
+      recalculateStreakFromHistory();
+    }
+
+    function recalculateStreakFromHistory() {
+      let streak = 0;
+      const today = getTodayStr(0);
+      let checkOffset = hasActiveEntries(state.checkInHistory[today]) ? 0 : -1;
+
+      while (true) {
+        const dateKey = getTodayStr(checkOffset);
+        const record = state.checkInHistory[dateKey];
+        if (record && (hasActiveEntries(record) || record.shielded)) {
+          streak++;
+          checkOffset--;
+        } else {
+          break;
+        }
+      }
+      state.streak = streak;
+    }
+
+    // ==================== 3. Web Audio API 歡樂音效 ====================
+    function playChime(type = 'complete') {
+      if (!state.soundEnabled) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+
+        let notes = [440, 554.37];
+        if (type === 'complete') notes = [523.25, 659.25, 783.99, 1046.50];
+        if (type === 'super') notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+        if (type === 'coin') notes = [987.77, 1318.51];
+
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+          
+          gain.gain.setValueAtTime(0.001, now + idx * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.16, now + idx * 0.07 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.32);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.07);
+          osc.stop(now + idx * 0.07 + 0.34);
+        });
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      state.soundEnabled = !state.soundEnabled;
+      saveState();
+      renderStats();
+      if (state.soundEnabled) playChime('click');
+      showToast(state.soundEnabled ? '🔊 音效已開啟' : '🔇 音效已靜音');
+    }
+
+    // ==================== 4. 畫面渲染核心 ====================
+    function renderAll() {
+      evaluateStreakAndShields();
+      renderStats();
+      renderWallFilterTabs();
+      renderCheckInWall();
+      renderSelectedDayDetails();
+      renderPathway();
+      document.getElementById('quest-board-title').textContent = state.boardTitle;
+      document.getElementById('input-board-title').value = state.boardTitle;
+    }
+
+    function renderStats() {
+      document.getElementById('stat-streak').textContent = state.streak;
+      document.getElementById('stat-shields').textContent = state.shields;
+      document.getElementById('stat-xp').textContent = `${state.xp} XP`;
+      document.getElementById('stat-tokens').textContent = state.tokens;
+      document.getElementById('arcade-token-count').textContent = state.tokens;
+      
+      const level = Math.floor(state.xp / 100) + 1;
+      document.getElementById('stat-level').textContent = `Lv.${level}`;
+      document.getElementById('sound-icon').textContent = state.soundEnabled ? '🔊' : '🔇';
+
+      // 今日進度條
+      const today = getTodayStr(0);
+      const todayEntries = state.checkInHistory[today]?.entries || [];
+      const todayCount = todayEntries.length;
+      const hasOverachieve = todayEntries.some(e => e.multiplier > 1);
+      const pct = Math.min(100, todayCount * 100);
+      
+      const bar = document.getElementById('today-progress-bar');
+      bar.style.width = `${pct}%`;
+      bar.className = hasOverachieve 
+        ? 'h-full bg-gradient-to-r from-duo-green to-duo-gold rounded-full transition-all duration-500'
+        : 'h-full bg-duo-green rounded-full transition-all duration-500';
+      
+      const badge = document.getElementById('today-status-badge');
+      if (todayCount >= 1) {
+        badge.textContent = hasOverachieve 
+          ? `👑 今日超額達標！(完成 ${todayCount} 筆)` 
+          : `✨ 今日已達標！(完成 ${todayCount} 筆)`;
+        badge.className = hasOverachieve ? 'text-amber-600 font-black' : 'text-duo-green font-black';
+      } else {
+        badge.textContent = `0 / 1 已完成`;
+        badge.className = 'text-duo-muted font-black';
+      }
+    }
+
+    // 渲染打卡牆上方的分目標篩選分頁
+    function renderWallFilterTabs() {
+      const container = document.getElementById('wall-filter-tabs');
+      container.innerHTML = '';
+
+      const tabs = [
+        { id: 'ALL', label: '🌍 全部總覽' },
+        ...state.goals.map(g => ({ id: g.id, label: `${g.icon} ${g.title}` }))
+      ];
+
+      tabs.forEach(t => {
+        const isActive = selectedWallFilter === t.id;
+        const btn = document.createElement('button');
+        btn.onclick = () => {
+          selectedWallFilter = t.id;
+          renderWallFilterTabs();
+          renderCheckInWall();
+          renderSelectedDayDetails();
+        };
+        btn.className = isActive
+          ? 'shrink-0 px-3 py-1.5 rounded-xl bg-duo-green text-white font-black text-xs shadow-xs transition'
+          : 'shrink-0 px-3 py-1.5 rounded-xl bg-duo-bg hover:bg-gray-200 text-duo-muted font-extrabold text-xs transition';
+        btn.textContent = t.label;
+        container.appendChild(btn);
+      });
+    }
+
+    // 渲染近 35 天每天打卡牆（支援全部總覽與單一目標獨立熱力圖）
+    function renderCheckInWall() {
+      const grid = document.getElementById('checkin-wall-grid');
+      grid.innerHTML = '';
+
+      const now = new Date();
+      const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
+      const daysUntilSunday = 7 - dayOfWeek;
+      const totalCells = 35;
+
+      let activeDaysCount = 0;
+      Object.values(state.checkInHistory).forEach(rec => {
+        const entries = rec.entries || [];
+        const filtered = selectedWallFilter === 'ALL' 
+          ? entries 
+          : entries.filter(e => e.goalId === selectedWallFilter);
+        if (filtered.length > 0) activeDaysCount++;
+      });
+      document.getElementById('total-active-days').textContent = `此視圖累積：${activeDaysCount} 天`;
+
+      for (let i = totalCells - 1; i >= 0; i--) {
+        const offset = daysUntilSunday - i;
+        const dateStr = getTodayStr(offset);
+        const dayNum = parseInt(dateStr.split('-')[2], 10);
+        const isToday = offset === 0;
+        const isFuture = offset > 0;
+        const isSelected = selectedWallDate === dateStr;
+        const record = state.checkInHistory[dateStr];
+
+        const allEntries = record?.entries || [];
+        const entries = selectedWallFilter === 'ALL'
+          ? allEntries
+          : allEntries.filter(e => e.goalId === selectedWallFilter);
+
+        const maxMultiplier = entries.reduce((max, e) => Math.max(max, e.multiplier || 1), 0);
+        const isShielded = selectedWallFilter === 'ALL' && record?.shielded && entries.length === 0;
+
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.onclick = () => {
+          selectedWallDate = dateStr;
+          renderCheckInWall();
+          renderSelectedDayDetails();
+        };
+
+        let bgClass = 'bg-gray-100 text-gray-400 border-gray-200 hover:border-gray-300';
+        let badgeHTML = '';
+
+        if (isFuture) {
+          bgClass = 'bg-gray-50/60 text-gray-300 border-dashed border-gray-200';
+        } else if (entries.length > 0) {
+          if (maxMultiplier > 1) {
+            // 超額完成：琥珀金皇冠樣式！
+            bgClass = 'bg-gradient-to-br from-amber-300 to-duo-gold text-amber-950 border-duo-goldDark font-black shadow-xs';
+            badgeHTML = `<span class="text-[9px] leading-none mt-0.5">👑${maxMultiplier}x</span>`;
+          } else {
+            // 基準達標：多鄰國亮綠色
+            bgClass = 'bg-duo-green text-white border-duo-greenDark font-black';
+            badgeHTML = entries.length > 1 ? `<span class="text-[9px] leading-none mt-0.5">×${entries.length}</span>` : '';
+          }
+        } else if (isShielded) {
+          bgClass = 'bg-duo-blue/25 text-duo-blue border-sky-300 font-black';
+          badgeHTML = `<span class="text-[9px] leading-none">🛡️</span>`;
+        }
+
+        const ringClass = isSelected 
+          ? 'ring-2 ring-duo-text ring-offset-1 scale-105 z-10' 
+          : (isToday ? 'ring-2 ring-duo-blue ring-offset-1' : '');
+
+        cell.className = `aspect-square rounded-xl border flex flex-col items-center justify-center text-xs transition relative ${bgClass} ${ringClass}`;
+        cell.innerHTML = `<span class="leading-none">${dayNum}</span>${badgeHTML}`;
+        grid.appendChild(cell);
+      }
+    }
+
+    // 渲染選中日期的獨立紀錄明細
+    function renderSelectedDayDetails() {
+      const container = document.getElementById('selected-day-details');
+      const record = state.checkInHistory[selectedWallDate];
+      const allEntries = record?.entries || [];
+      const entries = selectedWallFilter === 'ALL'
+        ? allEntries
+        : allEntries.filter(e => e.goalId === selectedWallFilter);
+
+      const isToday = selectedWallDate === getTodayStr(0);
+      const dateTitle = isToday ? `${selectedWallDate} (今天)` : selectedWallDate;
+
+      if (entries.length === 0) {
+        const shieldNote = record?.shielded ? '🛡️ 這天使用了連勝護盾平穩度過，無壓力保留連勝！' : '這天沒有紀錄，輕鬆休息或點擊右上角隨手打卡！';
+        container.innerHTML = `
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-black text-duo-text">📌 ${dateTitle} 紀錄明細</span>
+          </div>
+          <div class="bg-duo-bg rounded-2xl p-3 text-xs font-bold text-duo-muted text-center">
+            ${shieldNote}
+          </div>
+        `;
+        return;
+      }
+
+      const itemsHTML = entries.map(entry => {
+        const isOver = (entry.multiplier || 1) > 1;
+        const badgeStyle = isOver 
+          ? 'bg-duo-goldLight text-amber-800 border-amber-300' 
+          : 'bg-duo-greenLight text-duo-greenDark border-duo-green/30';
+        const multLabel = isOver ? `👑 超額 ${entry.multiplier}x` : `✅ 基準達標`;
+
+        return `
+          <div class="bg-duo-bg border border-duo-gray rounded-2xl p-2.5 flex items-start justify-between gap-2">
+            <div class="flex items-start gap-2 min-w-0">
+              <span class="text-lg shrink-0 mt-0.5">${entry.icon || '🎯'}</span>
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="font-black text-xs text-duo-text">${escapeHTML(entry.goalTitle)}</span>
+                  <span class="text-[10px] font-black px-2 py-0.5 rounded-full border ${badgeStyle}">${multLabel}</span>
+                </div>
+                <div class="text-[11px] font-extrabold text-duo-blue mt-0.5">
+                  實際完成：${entry.actualAmount} ${escapeHTML(entry.unit || '')} <span class="text-duo-muted font-bold">(基準 ${entry.baseAmount} ${escapeHTML(entry.unit || '')})</span>
+                </div>
+                ${entry.note ? `<div class="text-[11px] font-bold text-duo-muted mt-0.5 break-words">💬 ${escapeHTML(entry.note)}</div>` : ''}
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <span class="text-xs font-black text-amber-600">+${entry.xp} XP</span>
+              ${entry.time ? `<div class="text-[10px] font-bold text-duo-muted">${entry.time}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-black text-duo-text">📌 ${dateTitle} 紀錄明細 (${entries.length} 筆)</span>
+        </div>
+        <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+          ${itemsHTML}
+        </div>
+      `;
+    }
+
+    // 渲染多鄰國蜿蜒關卡路徑
+    function renderPathway() {
+      const container = document.getElementById('pathway-container');
+      container.innerHTML = '';
+
+      if (state.goals.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 text-duo-muted">
+            <div class="text-4xl mb-2">🗺️</div>
+            <p class="font-black text-base">目前還沒有設定關卡喔！</p>
+            <p class="text-xs font-bold mt-1">點擊下方按鈕新增你的第一個微目標吧</p>
+          </div>
+        `;
+        return;
+      }
+
+      const today = getTodayStr(0);
+      const todayEntries = state.checkInHistory[today]?.entries || [];
+      const firstUncompletedIndex = state.goals.findIndex(g => !g.completed);
+      const offsets = ['translate-x-0', '-translate-x-10 sm:-translate-x-14', 'translate-x-0', 'translate-x-10 sm:translate-x-14'];
+
+      state.goals.forEach((goal, index) => {
+        const offsetClass = offsets[index % offsets.length];
+        const isCompleted = goal.completed;
+        const isCurrent = index === firstUncompletedIndex;
+
+        // 檢查今天這個目標是否有超額紀錄
+        const todayGoalEntries = todayEntries.filter(e => e.goalId === goal.id);
+        const todayMaxMult = todayGoalEntries.reduce((m, e) => Math.max(m, e.multiplier || 1), 0);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = `relative flex flex-col items-center ${offsetClass} transition-transform`;
+
+        if (isCurrent) {
+          const badge = document.createElement('div');
+          badge.className = 'animate-float mb-2 bg-white border-2 border-duo-green text-duo-green font-black text-xs px-3.5 py-1 rounded-xl shadow-sm uppercase tracking-wider relative';
+          badge.innerHTML = `
+            開始這關！
+            <div class="w-2.5 h-2.5 bg-white border-r-2 border-b-2 border-duo-green rotate-45 absolute -bottom-1.5 left-1/2 -translate-x-1/2"></div>
+          `;
+          wrapper.appendChild(badge);
+        }
+
+        const btn = document.createElement('button');
+        btn.onclick = () => openNodeModal(goal.id);
+
+        let btnColors = 'bg-duo-green text-white';
+        let shadowHex = '#46A302';
+        let ringStyle = '';
+
+        if (isCompleted) {
+          btnColors = 'bg-duo-gold text-white';
+          shadowHex = '#E5A400';
+        } else if (isCurrent) {
+          btnColors = 'bg-duo-green text-white';
+          shadowHex = '#46A302';
+          ringStyle = 'ring-8 ring-duo-green/20';
+        } else {
+          btnColors = 'bg-duo-blue text-white';
+          shadowHex = '#1899D6';
+        }
+
+        btn.style.setProperty('--shadow-color', shadowHex);
+        btn.className = `node-btn w-20 h-20 sm:w-22 sm:h-22 rounded-full flex items-center justify-center text-3xl sm:text-4xl relative ${btnColors} ${ringStyle}`;
+        
+        btn.innerHTML = `
+          <span>${goal.icon}</span>
+          ${isCompleted ? '<span class="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-white text-duo-goldDark border-2 border-duo-gold text-sm flex items-center justify-center font-black shadow-xs">👑</span>' : ''}
+          ${todayMaxMult > 1 ? `<span class="absolute -bottom-1 -right-2 bg-amber-950 text-duo-gold border-2 border-duo-gold text-[10px] font-black px-1.5 py-0.5 rounded-full">⚡${todayMaxMult}x</span>` : ''}
+        `;
+        wrapper.appendChild(btn);
+
+        const label = document.createElement('div');
+        label.className = 'mt-2.5 text-center max-w-[175px]';
+        label.innerHTML = `
+          <div class="text-xs sm:text-sm font-black text-duo-text line-clamp-1">${escapeHTML(goal.title)}</div>
+          <div class="text-[11px] font-bold text-duo-muted">基準：${goal.baseAmount || 5} ${escapeHTML(goal.unit || '分鐘')}</div>
+        `;
+        wrapper.appendChild(label);
+
+        container.appendChild(wrapper);
+      });
+    }
+
+    // ==================== 5. 關卡互動與「基準 vs. 超額完成」打卡 ====================
+    function openNodeModal(goalId) {
+      const goal = state.goals.find(g => g.id === goalId);
+      if (!goal) return;
+
+      activeModalNodeId = goalId;
+      playChime('click');
+
+      const baseAmt = Number(goal.baseAmount) || 5;
+      const unitStr = goal.unit || '分鐘';
+
+      document.getElementById('modal-node-icon').textContent = goal.icon;
+      document.getElementById('modal-node-title').textContent = goal.title;
+      document.getElementById('modal-node-desc').textContent = goal.desc || `平常只要完成 ${baseAmt} ${unitStr}就算過關！`;
+      document.getElementById('modal-base-amount-label').textContent = `${baseAmt} ${unitStr}`;
+      document.getElementById('modal-unit-label').textContent = unitStr;
+      document.getElementById('modal-checkin-note').value = '';
+
+      setCheckInMultiplier(1);
+
+      const badge = document.getElementById('modal-node-badge');
+      const completeBtn = document.getElementById('modal-complete-btn');
+      const toggleBtn = document.getElementById('modal-toggle-status-btn');
+
+      if (goal.completed) {
+        badge.textContent = '👑 已完成關卡（可再次紀錄超額進度）';
+        badge.className = 'bg-duo-goldLight text-amber-700 text-xs font-black px-3 py-1 rounded-full';
+        completeBtn.textContent = '🎉 再次打卡並領取獎勵！';
+        toggleBtn.textContent = '重設為未完成';
+      } else {
+        badge.textContent = '🌱 進行中關卡';
+        badge.className = 'bg-duo-greenLight text-duo-greenDark text-xs font-black px-3 py-1 rounded-full';
+        completeBtn.textContent = '🎉 完成打卡！領取經驗值與代幣';
+        toggleBtn.textContent = '標記為已完成';
+      }
+
+      openModal('node-modal');
+    }
+
+    function setCheckInMultiplier(mult) {
+      const goal = state.goals.find(g => g.id === activeModalNodeId);
+      if (!goal) return;
+      const baseAmt = Number(goal.baseAmount) || 5;
+      const actual = Number((baseAmt * mult).toFixed(1));
+      document.getElementById('modal-actual-amount').value = actual;
+      onActualAmountInput();
+    }
+
+    function onActualAmountInput() {
+      const goal = state.goals.find(g => g.id === activeModalNodeId);
+      if (!goal) return;
+      const baseAmt = Number(goal.baseAmount) || 5;
+      const baseXp = Number(goal.xp) || 20;
+      const actual = Math.max(0.1, parseFloat(document.getElementById('modal-actual-amount').value) || baseAmt);
+      
+      const ratio = Number((actual / baseAmt).toFixed(1));
+      // 超額時 XP 依比例加成（最高 4 倍封頂避免失衡）
+      const effectiveMult = Math.min(4, Math.max(1, ratio));
+      const calcXp = Math.round(baseXp * effectiveMult);
+      document.getElementById('modal-calc-xp').textContent = calcXp;
+
+      const tag = document.getElementById('modal-multiplier-tag');
+      if (ratio > 1) {
+        tag.textContent = `👑 超額完成 ${ratio}x！太神啦`;
+        tag.className = 'bg-duo-goldLight text-amber-800 border border-amber-300 text-xs font-black px-2.5 py-0.5 rounded-full';
+      } else if (ratio === 1) {
+        tag.textContent = `✅ 1.0x 剛好達標`;
+        tag.className = 'bg-duo-greenLight text-duo-greenDark text-xs font-black px-2.5 py-0.5 rounded-full';
+      } else {
+        tag.textContent = `🌱 暖身啟動 (${ratio}x)`;
+        tag.className = 'bg-duo-blueLight text-duo-blue text-xs font-black px-2.5 py-0.5 rounded-full';
+      }
+
+      // 高亮對應快速按鈕
+      document.querySelectorAll('.mult-btn').forEach(btn => {
+        const bMult = parseFloat(btn.dataset.mult);
+        if (Math.abs(bMult - ratio) < 0.05) {
+          btn.className = ratio > 1
+            ? 'mult-btn bg-duo-goldLight border-2 border-duo-goldDark text-amber-950 font-black text-xs py-2 rounded-xl transition'
+            : 'mult-btn bg-duo-greenLight border-2 border-duo-green text-duo-greenDark font-black text-xs py-2 rounded-xl transition';
+        } else {
+          btn.className = 'mult-btn bg-white border-2 border-duo-gray text-duo-text font-black text-xs py-2 rounded-xl transition';
+        }
+      });
+    }
+
+    function completeCurrentNode() {
+      const goal = state.goals.find(g => g.id === activeModalNodeId);
+      if (!goal) return;
+
+      const baseAmt = Number(goal.baseAmount) || 5;
+      const baseXp = Number(goal.xp) || 20;
+      const actualAmount = Math.max(0.1, parseFloat(document.getElementById('modal-actual-amount').value) || baseAmt);
+      const note = document.getElementById('modal-checkin-note').value.trim();
+      const multiplier = Number((actualAmount / baseAmt).toFixed(1));
+      const earnedXp = Math.round(baseXp * Math.min(4, Math.max(1, multiplier)));
+
+      goal.completed = true;
+      state.xp += earnedXp;
+
+      // 超額完成額外多送 1 枚遊樂場代幣！
+      const earnedTokens = multiplier >= 2 ? 2 : 1;
+      state.tokens += earnedTokens;
+
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      addCheckInEntry({
+        id: 'entry_' + Date.now(),
+        goalId: goal.id,
+        goalTitle: goal.title,
+        icon: goal.icon,
+        baseAmount: baseAmt,
+        actualAmount: actualAmount,
+        unit: goal.unit || '分鐘',
+        multiplier: multiplier,
+        xp: earnedXp,
+        note: note,
+        time: timeStr
+      });
+
+      // 累積護盾進度
+      state.tasksCompletedTowardsShield = (state.tasksCompletedTowardsShield || 0) + 1;
+      let shieldBonusMsg = '';
+      if (state.tasksCompletedTowardsShield >= 3) {
+        state.shields += 1;
+        state.tasksCompletedTowardsShield = 0;
+        shieldBonusMsg = ' ＋1 個連勝護盾 🛡️！';
+      }
+
+      selectedWallDate = getTodayStr(0);
+      saveState();
+      closeModal('node-modal');
+      renderAll();
+      triggerCelebration(multiplier > 1);
+
+      const overText = multiplier > 1 ? `（超額 ${multiplier}x 完成 ${actualAmount}${goal.unit || ''}！）` : '';
+      mascotEncourage(false, `太棒了！你完成了「${goal.title}」${overText}獲得 +${earnedXp} XP 與 +${earnedTokens} 枚遊樂場代幣 🪙${shieldBonusMsg}`);
+      showToast(`🎉 打卡成功！+${earnedXp} XP、+${earnedTokens} 🪙代幣！`, 'success');
+    }
+
+    function addCheckInEntry(entry) {
+      const today = getTodayStr(0);
+      if (!state.checkInHistory[today]) {
+        state.checkInHistory[today] = { entries: [], shielded: false };
+      }
+      if (!Array.isArray(state.checkInHistory[today].entries)) {
+        state.checkInHistory[today].entries = [];
+      }
+      state.checkInHistory[today].entries.unshift(entry);
+      state.checkInHistory[today].shielded = false;
+      state.lastCheckInDate = today;
+      recalculateStreakFromHistory();
+    }
+
+    function manualTodayCheckIn() {
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      addCheckInEntry({
+        id: 'manual_' + Date.now(),
+        goalId: 'MANUAL',
+        goalTitle: '今日隨手微行動',
+        icon: '✨',
+        baseAmount: 1,
+        actualAmount: 1,
+        unit: '次',
+        multiplier: 1,
+        xp: 10,
+        note: '隨手記錄今天的小努力！',
+        time: timeStr
+      });
+      state.xp += 10;
+      state.tokens += 1;
+      selectedWallDate = getTodayStr(0);
+      saveState();
+      renderAll();
+      triggerCelebration(false);
+      mascotEncourage(false, '隨手打卡成功！獲得 +10 XP 與 +1 枚遊樂場代幣 🪙');
+      showToast('✅ 隨手打卡成功！+10 XP、+1 🪙', 'success');
+    }
+
+    function toggleNodeCompletedState() {
+      const goal = state.goals.find(g => g.id === activeModalNodeId);
+      if (!goal) return;
+      goal.completed = !goal.completed;
+      saveState();
+      closeModal('node-modal');
+      renderAll();
+      showToast(goal.completed ? '已標記為完成 👑' : '已重設為未完成狀態');
+    }
+
+    function editFromNodeModal() {
+      const goalId = activeModalNodeId;
+      closeModal('node-modal');
+      openManagerModal();
+      startEditGoal(goalId);
+    }
+
+    function triggerCelebration(isSuper = false) {
+      playChime(isSuper ? 'super' : 'complete');
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: isSuper ? 110 : 60,
+          spread: isSuper ? 95 : 70,
+          origin: { y: 0.65 },
+          colors: ['#58CC02', '#FFC800', '#1CB0F6', '#CE82FF']
+        });
+      }
+    }
+
+    function mascotEncourage(playClick = false, customText = null) {
+      if (playClick) playChime('click');
+      const msgEl = document.getElementById('mascot-message');
+      if (customText) {
+        msgEl.textContent = customText;
+        return;
+      }
+      const current = msgEl.textContent.trim();
+      const candidates = ENCOURAGEMENTS.filter(m => m !== current);
+      const next = candidates[Math.floor(Math.random() * candidates.length)];
+      msgEl.textContent = next;
+    }
+
+    // ==================== 6. 輸入與更改目標管理功能 ====================
+    function openManagerModal(focusInput = false) {
+      resetGoalForm();
+      renderManagerList();
+      openModal('manager-modal');
+      if (focusInput) {
+        setTimeout(() => document.getElementById('input-goal-title').focus(), 100);
+      }
+    }
+
+    function saveBoardTitle() {
+      const val = document.getElementById('input-board-title').value.trim();
+      if (!val) {
+        showToast('請輸入標題名稱喔！', 'error');
+        return;
+      }
+      state.boardTitle = val;
+      saveState();
+      renderAll();
+      showToast('✨ 冒險地圖標題已更新！', 'success');
+    }
+
+    function submitGoalForm() {
+      const editId = document.getElementById('edit-goal-id').value;
+      const icon = document.getElementById('input-goal-icon').value;
+      const title = document.getElementById('input-goal-title').value.trim();
+      const baseAmount = Math.max(1, parseFloat(document.getElementById('input-goal-base').value) || 5);
+      const unit = document.getElementById('input-goal-unit').value.trim() || '分鐘';
+      const xp = parseInt(document.getElementById('input-goal-xp').value, 10) || 20;
+      const desc = document.getElementById('input-goal-desc').value.trim();
+
+      if (!title) {
+        showToast('請輸入目標名稱再儲存喔！', 'error');
+        document.getElementById('input-goal-title').focus();
+        return;
+      }
+
+      if (editId) {
+        const target = state.goals.find(g => g.id === editId);
+        if (target) {
+          target.icon = icon;
+          target.title = title;
+          target.baseAmount = baseAmount;
+          target.unit = unit;
+          target.xp = xp;
+          target.desc = desc || `平常只要完成 ${baseAmount} ${unit}就算過關！`;
+        }
+        showToast('✅ 目標已更新！', 'success');
+      } else {
+        state.goals.push({
+          id: 'g_' + Date.now(),
+          icon,
+          title,
+          baseAmount,
+          unit,
+          xp,
+          desc: desc || `平常只要完成 ${baseAmount} ${unit}就算過關！`,
+          completed: false
+        });
+        showToast('🎯 新關卡已加入冒險地圖！', 'success');
+      }
+
+      playChime('click');
+      saveState();
+      resetGoalForm();
+      renderManagerList();
+      renderAll();
+    }
+
+    function startEditGoal(goalId) {
+      const goal = state.goals.find(g => g.id === goalId);
+      if (!goal) return;
+
+      document.getElementById('edit-goal-id').value = goal.id;
+      document.getElementById('input-goal-icon').value = goal.icon;
+      document.getElementById('input-goal-title').value = goal.title;
+      document.getElementById('input-goal-base').value = goal.baseAmount || 5;
+      document.getElementById('input-goal-unit').value = goal.unit || '分鐘';
+      document.getElementById('input-goal-xp').value = String(goal.xp || 20);
+      document.getElementById('input-goal-desc').value = goal.desc || '';
+
+      document.getElementById('form-mode-title').textContent = '✏️ 正在修改關卡';
+      document.getElementById('btn-submit-goal').textContent = '儲存修改';
+      document.getElementById('btn-cancel-edit').classList.remove('hidden');
+      document.getElementById('input-goal-title').focus();
+    }
+
+    function resetGoalForm() {
+      document.getElementById('edit-goal-id').value = '';
+      document.getElementById('input-goal-icon').value = '🎯';
+      document.getElementById('input-goal-title').value = '';
+      document.getElementById('input-goal-base').value = '5';
+      document.getElementById('input-goal-unit').value = '分鐘';
+      document.getElementById('input-goal-xp').value = '20';
+      document.getElementById('input-goal-desc').value = '';
+      document.getElementById('form-mode-title').textContent = '➕ 新增目標關卡';
+      document.getElementById('btn-submit-goal').textContent = '加入冒險地圖';
+      document.getElementById('btn-cancel-edit').classList.add('hidden');
+    }
+
+    function moveGoal(index, direction) {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= state.goals.length) return;
+      const temp = state.goals[index];
+      state.goals[index] = state.goals[newIndex];
+      state.goals[newIndex] = temp;
+      saveState();
+      renderManagerList();
+      renderAll();
+    }
+
+    function deleteGoal(goalId) {
+      state.goals = state.goals.filter(g => g.id !== goalId);
+      if (selectedWallFilter === goalId) selectedWallFilter = 'ALL';
+      saveState();
+      renderManagerList();
+      renderAll();
+      showToast('🗑️ 已移除該關卡');
+    }
+
+    function renderManagerList() {
+      const list = document.getElementById('manager-goals-list');
+      list.innerHTML = '';
+
+      if (state.goals.length === 0) {
+        list.innerHTML = `<div class="text-center py-6 text-xs font-bold text-duo-muted bg-duo-bg rounded-2xl">清單目前是空的，請從上方新增目標！</div>`;
+        return;
+      }
+
+      state.goals.forEach((goal, idx) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between gap-2 bg-white border-2 border-duo-gray p-3 rounded-2xl';
+        row.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="text-2xl shrink-0">${goal.icon}</span>
+            <div class="min-w-0">
+              <div class="font-black text-sm text-duo-text truncate">
+                ${goal.completed ? '👑 ' : ''}${escapeHTML(goal.title)}
+              </div>
+              <div class="text-xs font-bold text-duo-muted truncate">基準 ${goal.baseAmount || 5} ${escapeHTML(goal.unit || '分鐘')} • +${goal.xp} XP</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button onclick="moveGoal(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="p-1.5 rounded-lg bg-duo-bg hover:bg-gray-200 disabled:opacity-30 text-xs font-black">↑</button>
+            <button onclick="moveGoal(${idx}, 1)" ${idx === state.goals.length - 1 ? 'disabled' : ''} class="p-1.5 rounded-lg bg-duo-bg hover:bg-gray-200 disabled:opacity-30 text-xs font-black">↓</button>
+            <button onclick="startEditGoal('${goal.id}')" class="px-2.5 py-1.5 rounded-lg bg-duo-blueLight text-duo-blue font-black text-xs hover:bg-sky-200">編輯</button>
+            <button onclick="deleteGoal('${goal.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-50 text-duo-red font-black text-xs hover:bg-red-100">刪除</button>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function loadTemplate(type) {
+      const templates = {
+        habit: {
+          title: '每日無壓力健康微習慣',
+          goals: [
+            { id: 't1_' + Date.now(), icon: '💧', title: '起床喝溫開水', desc: '補充水分，喚醒新陳代謝', baseAmount: 250, unit: 'ml', xp: 15, completed: false },
+            { id: 't2_' + Date.now(), icon: '🧘', title: '肩頸伸展', desc: '轉轉肩膀、深呼吸三次', baseAmount: 3, unit: '分鐘', xp: 15, completed: false },
+            { id: 't3_' + Date.now(), icon: '🏃', title: '散步或超慢跑', desc: '不用追求速度，出門吹吹風就好', baseAmount: 10, unit: '分鐘', xp: 25, completed: false }
+          ]
+        },
+        study: {
+          title: '每天微學習成長之旅',
+          goals: [
+            { id: 's1_' + Date.now(), icon: '🗣️', title: '背外語單字', desc: '大聲唸出來兩遍就算過關！', baseAmount: 3, unit: '個', xp: 15, completed: false },
+            { id: 's2_' + Date.now(), icon: '📖', title: '閱讀好書', desc: '只看 5 分鐘也超棒，精神好再多看', baseAmount: 5, unit: '分鐘', xp: 20, completed: false },
+            { id: 's3_' + Date.now(), icon: '💻', title: '寫程式 / 做筆記', desc: '把學到的知識轉化成自己的輸出', baseAmount: 15, unit: '分鐘', xp: 30, completed: false }
+          ]
+        }
+      };
+
+      const selected = templates[type];
+      if (!selected) return;
+      state.boardTitle = selected.title;
+      state.goals = selected.goals;
+      selectedWallFilter = 'ALL';
+      saveState();
+      renderManagerList();
+      renderAll();
+      showToast(`✨ 已套用「${selected.title}」範本！`, 'success');
+    }
+
+    // ==================== 7. 無壓力獎勵遊樂場（扭蛋機 + 2款迷你小遊戲 + 現實獎勵） ====================
+    let starGameInterval = null;
+    let starGameAnimId = null;
+
+    function openArcadeModal(defaultTab = 'chest') {
+      renderStickerCollection();
+      renderCustomRewards();
+      switchArcadeTab(defaultTab);
+      openModal('arcade-modal');
+    }
+
+    function closeArcadeModal() {
+      stopStarGame();
+      closeModal('arcade-modal');
+    }
+
+    function switchArcadeTab(tabName) {
+      document.querySelectorAll('.arcade-panel').forEach(p => p.classList.add('hidden'));
+      document.getElementById(`panel-arcade-${tabName}`).classList.remove('hidden');
+
+      document.querySelectorAll('.arcade-tab').forEach(btn => {
+        btn.className = 'arcade-tab px-4 py-2.5 rounded-t-xl font-black text-xs sm:text-sm text-duo-muted hover:text-duo-text';
+      });
+      document.getElementById(`tab-arcade-${tabName}`).className = 'arcade-tab px-4 py-2.5 rounded-t-xl font-black text-xs sm:text-sm bg-white text-duo-purpleDark border-t-2 border-x-2 border-duo-gray';
+    }
+
+    // (A) 幸運扭蛋機
+    function playGacha() {
+      if (state.tokens < 1) {
+        showToast('🪙 代幣不足！去完成一個小目標就能拿到代幣喔', 'error');
+        return;
+      }
+      state.tokens -= 1;
+      playChime('coin');
+
+      const capsule = document.getElementById('gacha-capsule');
+      capsule.classList.add('animate-spin');
+
+      setTimeout(() => {
+        capsule.classList.remove('animate-spin');
+        const roll = Math.random();
+
+        if (roll < 0.55) {
+          // 抽中可愛貼紙
+          const sticker = ALL_STICKERS[Math.floor(Math.random() * ALL_STICKERS.length)];
+          const isNew = !state.unlockedStickers.includes(sticker.id);
+          if (isNew) {
+            state.unlockedStickers.push(sticker.id);
+          } else {
+            state.xp += 15;
+          }
+          capsule.textContent = sticker.icon;
+          document.getElementById('gacha-result-title').textContent = isNew 
+            ? `🎉 獲得新貼紙：【${sticker.name}】！` 
+            : `✨ 抽到【${sticker.name}】（已擁有，自動轉換為 +15 XP！）`;
+          document.getElementById('gacha-result-desc').textContent = '已收錄進下方貼紙收藏櫃中！';
+        } else if (roll < 0.8) {
+          // 抽中額外 XP 寶石
+          state.xp += 30;
+          capsule.textContent = '⚡';
+          document.getElementById('gacha-result-title').textContent = '⚡ 幸運大爆發！獲得 +30 XP！';
+          document.getElementById('gacha-result-desc').textContent = '經驗值大幅上升，離下一級更近一步了！';
+        } else {
+          // 抽中無壓力護盾
+          state.shields += 1;
+          capsule.textContent = '🛡️';
+          document.getElementById('gacha-result-title').textContent = '🛡️ 抽中稀有【連勝冰凍護盾】×1！';
+          document.getElementById('gacha-result-desc').textContent = '哪天想徹底放空休息時，它會自動幫你守住連勝！';
+        }
+
+        saveState();
+        renderStats();
+        renderStickerCollection();
+        triggerCelebration(false);
+      }, 450);
+    }
+
+    function renderStickerCollection() {
+      const grid = document.getElementById('sticker-collection-grid');
+      grid.innerHTML = '';
+      document.getElementById('sticker-count').textContent = state.unlockedStickers.length;
+
+      ALL_STICKERS.forEach(s => {
+        const unlocked = state.unlockedStickers.includes(s.id);
+        const div = document.createElement('div');
+        div.className = unlocked
+          ? 'aspect-square rounded-2xl bg-duo-goldLight border-2 border-duo-gold flex flex-col items-center justify-center p-1 text-center'
+          : 'aspect-square rounded-2xl bg-duo-bg border-2 border-dashed border-duo-gray flex flex-col items-center justify-center p-1 opacity-40';
+        div.title = unlocked ? s.name : '尚未解鎖';
+        div.innerHTML = `
+          <span class="text-2xl">${unlocked ? s.icon : '❓'}</span>
+          <span class="text-[9px] font-black text-duo-text truncate w-full mt-0.5">${unlocked ? s.name : '未解鎖'}</span>
+        `;
+        grid.appendChild(div);
+      });
+    }
+
+    // (B) 迷你小遊戲 1：接星星大作戰 (Canvas)
+    function startStarGame() {
+      if (state.tokens < 1) {
+        showToast('🪙 代幣不足！完成一個小目標就能拿到代幣喔', 'error');
+        return;
+      }
+      state.tokens -= 1;
+      saveState();
+      renderStats();
+      playChime('coin');
+
+      stopStarGame();
+      document.getElementById('star-game-overlay').classList.add('hidden');
+      const btn = document.getElementById('btn-start-star-game');
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+
+      const canvas = document.getElementById('star-canvas');
+      const ctx = canvas.getContext('2d');
+      let score = 0;
+      let timeLeft = 15;
+      let basketX = canvas.width / 2;
+      const stars = [];
+
+      document.getElementById('star-game-score').textContent = '0';
+      document.getElementById('star-game-time').textContent = '15';
+
+      const updateBasket = (clientX) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        basketX = Math.max(25, Math.min(canvas.width - 25, (clientX - rect.left) * scaleX));
+      };
+
+      canvas.onmousemove = (e) => updateBasket(e.clientX);
+      canvas.ontouchmove = (e) => {
+        if (e.touches[0]) updateBasket(e.touches[0].clientX);
+      };
+
+      starGameInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById('star-game-time').textContent = timeLeft;
+        if (timeLeft <= 0) {
+          stopStarGame();
+          const bonusXp = Math.max(10, Math.floor(score / 2));
+          state.xp += bonusXp;
+          saveState();
+          renderStats();
+          triggerCelebration(false);
+          const overlay = document.getElementById('star-game-overlay');
+          overlay.classList.remove('hidden');
+          overlay.innerHTML = `
+            <div class="text-4xl mb-2">🎉</div>
+            <p class="font-black text-lg text-duo-gold">時間到！獲得 ${score} 分</p>
+            <p class="text-xs text-slate-200 mt-1">自動轉換為 +${bonusXp} XP 冒險經驗值！</p>
+          `;
+          btn.disabled = false;
+          btn.classList.remove('opacity-50');
+        }
+      }, 1000);
+
+      function loop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 隨機產生星星
+        if (Math.random() < 0.08) {
+          stars.push({
+            x: 20 + Math.random() * (canvas.width - 40),
+            y: -15,
+            speed: 2.2 + Math.random() * 2,
+            icon: Math.random() < 0.2 ? '💎' : '⭐',
+            pts: Math.random() < 0.2 ? 15 : 5
+          });
+        }
+
+        // 繪製接星籃子
+        ctx.font = '32px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🧺', basketX, canvas.height - 14);
+
+        // 更新與繪製星星
+        for (let i = stars.length - 1; i >= 0; i--) {
+          const st = stars[i];
+          st.y += st.speed;
+          ctx.font = '24px sans-serif';
+          ctx.fillText(st.icon, st.x, st.y);
+
+          // 碰撞判定
+          if (st.y > canvas.height - 42 && st.y < canvas.height - 5 && Math.abs(st.x - basketX) < 32) {
+            score += st.pts;
+            document.getElementById('star-game-score').textContent = score;
+            playChime('coin');
+            stars.splice(i, 1);
+          } else if (st.y > canvas.height + 20) {
+            stars.splice(i, 1);
+          }
+        }
+
+        starGameAnimId = requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    function stopStarGame() {
+      if (starGameInterval) clearInterval(starGameInterval);
+      if (starGameAnimId) cancelAnimationFrame(starGameAnimId);
+      starGameInterval = null;
+      starGameAnimId = null;
+    }
+
+    // (C) 迷你小遊戲 2：治癒翻翻樂 (3x4 配對)
+    let memoryCards = [];
+    let flippedIndices = [];
+    let matchedCount = 0;
+    let memoryLocked = false;
+
+    function startMemoryGame() {
+      if (state.tokens < 1) {
+        showToast('🪙 代幣不足！完成一個小目標就能拿到代幣喔', 'error');
+        return;
+      }
+      state.tokens -= 1;
+      saveState();
+      renderStats();
+      playChime('coin');
+
+      const icons = ['🦉', '🦖', '🦊', '🐼', '🦄', '🐝'];
+      memoryCards = [...icons, ...icons]
+        .sort(() => Math.random() - 0.5)
+        .map((icon, idx) => ({ id: idx, icon, flipped: false, matched: false }));
+      flippedIndices = [];
+      matchedCount = 0;
+      memoryLocked = false;
+      document.getElementById('memory-pairs').textContent = '0';
+      renderMemoryGrid();
+    }
+
+    function renderMemoryGrid() {
+      const grid = document.getElementById('memory-grid');
+      grid.innerHTML = '';
+      if (memoryCards.length === 0) {
+        grid.innerHTML = `<div class="col-span-4 py-8 text-xs font-bold text-duo-muted">點擊右上角「消耗 1 🪙 開新局」開始輕鬆配對！</div>`;
+        return;
+      }
+
+      memoryCards.forEach((card, idx) => {
+        const btn = document.createElement('button');
+        btn.onclick = () => flipMemoryCard(idx);
+        btn.className = card.matched
+          ? 'aspect-square rounded-2xl bg-duo-greenLight border-2 border-duo-green text-3xl flex items-center justify-center'
+          : card.flipped
+            ? 'aspect-square rounded-2xl bg-duo-goldLight border-2 border-duo-gold text-3xl flex items-center justify-center'
+            : 'duo-btn aspect-square rounded-2xl bg-duo-blue border-b-4 border-duo-blueDark text-white font-black text-xl flex items-center justify-center';
+        btn.textContent = (card.flipped || card.matched) ? card.icon : '❓';
+        grid.appendChild(btn);
+      });
+    }
+
+    function flipMemoryCard(idx) {
+      if (memoryLocked) return;
+      const card = memoryCards[idx];
+      if (!card || card.flipped || card.matched) return;
+
+      card.flipped = true;
+      flippedIndices.push(idx);
+      playChime('click');
+      renderMemoryGrid();
+
+      if (flippedIndices.length === 2) {
+        memoryLocked = true;
+        const [i1, i2] = flippedIndices;
+        if (memoryCards[i1].icon === memoryCards[i2].icon) {
+          memoryCards[i1].matched = true;
+          memoryCards[i2].matched = true;
+          matchedCount++;
+          document.getElementById('memory-pairs').textContent = matchedCount;
+          flippedIndices = [];
+          memoryLocked = false;
+          playChime('coin');
+          renderMemoryGrid();
+
+          if (matchedCount === 6) {
+            state.xp += 25;
+            saveState();
+            renderStats();
+            triggerCelebration(false);
+            showToast('🎉 全部配對成功！獲得 +25 XP！', 'success');
+          }
+        } else {
+          setTimeout(() => {
+            memoryCards[i1].flipped = false;
+            memoryCards[i2].flipped = false;
+            flippedIndices = [];
+            memoryLocked = false;
+            renderMemoryGrid();
+          }, 650);
+        }
+      }
+    }
+
+    // (D) 自訂現實生活小獎勵兌換
+    function renderCustomRewards() {
+      const list = document.getElementById('custom-rewards-list');
+      list.innerHTML = '';
+
+      if (state.customRewards.length === 0) {
+        list.innerHTML = `<div class="text-center py-6 text-xs font-bold text-duo-muted">還沒有自訂現實獎勵，在上方輸入給自己的小犒賞吧！</div>`;
+        return;
+      }
+
+      state.customRewards.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between gap-2 bg-duo-bg border-2 border-duo-gray p-3 rounded-2xl';
+        row.innerHTML = `
+          <div class="font-black text-xs sm:text-sm text-duo-text">🎁 ${escapeHTML(item.title)}</div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="redeemCustomReward('${item.id}')" class="duo-btn bg-duo-gold hover:bg-amber-400 text-amber-950 font-black text-xs px-3 py-1.5 rounded-xl border-b-4 border-duo-goldDark">
+              兌換 (${item.cost} 🪙)
+            </button>
+            <button onclick="deleteCustomReward('${item.id}')" class="text-xs font-black text-duo-muted hover:text-duo-red px-1">✕</button>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function addCustomReward() {
+      const input = document.getElementById('input-custom-reward');
+      const cost = parseInt(document.getElementById('input-reward-cost').value, 10) || 3;
+      const title = input.value.trim();
+      if (!title) {
+        showToast('請輸入獎勵內容喔！', 'error');
+        return;
+      }
+      state.customRewards.push({ id: 'rew_' + Date.now(), title, cost });
+      input.value = '';
+      saveState();
+      renderCustomRewards();
+      showToast('✨ 已新增現實小獎勵！', 'success');
+    }
+
+    function redeemCustomReward(id) {
+      const item = state.customRewards.find(r => r.id === id);
+      if (!item) return;
+      if (state.tokens < item.cost) {
+        showToast(`🪙 需要 ${item.cost} 枚代幣，再完成幾個微目標就能兌換囉！`, 'error');
+        return;
+      }
+      state.tokens -= item.cost;
+      saveState();
+      renderStats();
+      triggerCelebration(true);
+      showToast(`🎊 成功兌換「${item.title}」！好好享受吧！`, 'success');
+    }
+
+    function deleteCustomReward(id) {
+      state.customRewards = state.customRewards.filter(r => r.id !== id);
+      saveState();
+      renderCustomRewards();
+    }
+
+    // ==================== 8. 備份與還原存檔 ====================
+    function openBackupModal() {
+      document.getElementById('backup-json-area').value = JSON.stringify(state, null, 2);
+      openModal('backup-modal');
+    }
+
+    function copyBackupJSON() {
+      const area = document.getElementById('backup-json-area');
+      area.select();
+      area.setSelectionRange(0, 99999);
+      try {
+        document.execCommand('copy');
+        showToast('📋 已複製存檔代碼到剪貼簿！', 'success');
+      } catch (e) {
+        showToast('複製失敗，請手動全選複製', 'error');
+      }
+    }
+
+    function downloadBackupFile() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", `goalquest-backup-${getTodayStr(0)}.json`);
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+      showToast('⬇️ 正在下載 JSON 備份檔案...', 'success');
+    }
+
+    function importBackupJSON() {
+      const raw = document.getElementById('backup-json-area').value.trim();
+      if (!raw) {
+        showToast('請先貼上存檔 JSON 代碼！', 'error');
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed.goals)) {
+          throw new Error('格式不符');
+        }
+        state = { ...DEFAULT_STATE, ...parsed };
+        saveState();
+        closeModal('backup-modal');
+        renderAll();
+        triggerCelebration(false);
+        showToast('🎊 存檔還原成功！', 'success');
+      } catch (e) {
+        showToast('❌ 存檔代碼格式錯誤，請檢查是否完整複製', 'error');
+      }
+    }
+
+    let resetConfirmPending = false;
+    function confirmResetAll() {
+      if (!resetConfirmPending) {
+        resetConfirmPending = true;
+        showToast('⚠️ 再點一次「重置所有資料」以確認清空進度', 'error');
+        setTimeout(() => { resetConfirmPending = false; }, 4000);
+        return;
+      }
+      localStorage.removeItem(STORAGE_KEY);
+      state = loadState();
+      resetConfirmPending = false;
+      closeModal('backup-modal');
+      renderAll();
+      showToast('🔄 已重置為初始冒險狀態');
+    }
+
+    // ==================== 9. 通用 Modal、吐司通知與工具函式 ====================
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+    }
+
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+    }
+
+    function showToast(message, type = 'normal') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      let colors = 'bg-duo-text text-white border-gray-700';
+      if (type === 'success') colors = 'bg-duo-green text-white border-duo-greenDark';
+      if (type === 'error') colors = 'bg-duo-red text-white border-red-700';
+      if (type === 'info') colors = 'bg-duo-blue text-white border-duo-blueDark';
+
+      toast.className = `px-4 py-3 rounded-2xl border-b-4 font-black text-xs sm:text-sm shadow-lg transition-all duration-300 transform translate-y-2 opacity-0 text-center ${colors}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 2800);
+    }
+
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // 明確掛載至 window 確保所有內聯 onclick 事件在各種預覽環境中皆可正常存取
+    Object.assign(window, {
+      openArcadeModal,
+      closeArcadeModal,
+      switchArcadeTab,
+      playGacha,
+      startStarGame,
+      startMemoryGame,
+      flipMemoryCard,
+      addCustomReward,
+      redeemCustomReward,
+      deleteCustomReward,
+      toggleSound,
+      mascotEncourage,
+      manualTodayCheckIn,
+      openManagerModal,
+      saveBoardTitle,
+      submitGoalForm,
+      startEditGoal,
+      resetGoalForm,
+      moveGoal,
+      deleteGoal,
+      loadTemplate,
+      openNodeModal,
+      setCheckInMultiplier,
+      onActualAmountInput,
+      completeCurrentNode,
+      toggleNodeCompletedState,
+      editFromNodeModal,
+      openBackupModal,
+      copyBackupJSON,
+      downloadBackupFile,
+      importBackupJSON,
+      confirmResetAll,
+      openModal,
+      closeModal
+    });
+
+    // 點擊背景遮罩關閉彈窗
+    ['node-modal', 'manager-modal', 'arcade-modal', 'backup-modal'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('click', (e) => {
+          if (e.target.id === id) {
+            if (id === 'arcade-modal') closeArcadeModal();
+            else closeModal(id);
+          }
+        });
+      }
+    });
+
+    // 啟動初始化
+    window.addEventListener('DOMContentLoaded', () => {
+      renderAll();
+      renderMemoryGrid();
+    });
+  </script>
+</body>
+</html>

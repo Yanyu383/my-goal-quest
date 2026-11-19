@@ -1365,7 +1365,30 @@
       if (!Array.isArray(state.checkInHistory[dateStr].entries)) {
         state.checkInHistory[dateStr].entries = [];
       }
-      state.checkInHistory[dateStr].entries.unshift(entry);
+
+      // 檢查同一天是否已有相同目標的紀錄（排除隨手打卡 MANUAL）
+      const existingEntry = entry.goalId !== 'MANUAL'
+        ? state.checkInHistory[dateStr].entries.find(e => e.goalId === entry.goalId)
+        : null;
+
+      if (existingEntry) {
+        // 合併數量與計算新的倍數、XP
+        existingEntry.actualAmount = Number((existingEntry.actualAmount + entry.actualAmount).toFixed(2));
+        const baseAmt = existingEntry.baseAmount || entry.baseAmount || 1;
+        existingEntry.multiplier = Number((existingEntry.actualAmount / baseAmt).toFixed(1));
+        existingEntry.xp = (existingEntry.xp || 0) + (entry.xp || 0);
+        existingEntry.time = entry.time;
+
+        // 合併心得備註（避免重複顯示相同文字）
+        if (entry.note) {
+          existingEntry.note = existingEntry.note
+            ? `${existingEntry.note} / ${entry.note}`
+            : entry.note;
+        }
+      } else {
+        state.checkInHistory[dateStr].entries.unshift(entry);
+      }
+
       state.checkInHistory[dateStr].shielded = false;
       state.lastCheckInDate = dateStr;
       recalculateStreakFromHistory();

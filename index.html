@@ -209,7 +209,7 @@
             <h2 class="font-black text-base text-duo-text flex items-center gap-1.5">
               <span>📅</span> 每天的打卡牆
             </h2>
-            <p class="text-xs font-bold text-duo-muted">切換目標查看專屬足跡，點擊日期補打卡或管理明細</p>
+            <p class="text-xs font-bold text-duo-muted">切換目標查看專屬足跡，同日同目標自動合併累計</p>
           </div>
           <button onclick="manualTodayCheckIn()" class="duo-btn bg-duo-blue hover:bg-sky-400 text-white font-black text-xs px-3 py-2 rounded-xl border-b-4 border-duo-blueDark">
             + 今日隨手打卡
@@ -231,7 +231,7 @@
           <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
         </div>
 
-        <!-- 打卡方格陣列 (改為完整當月日曆排版) -->
+        <!-- 打卡方格陣列 -->
         <div id="checkin-wall-grid" class="grid grid-cols-7 gap-1.5"></div>
 
         <!-- 圖例說明 -->
@@ -244,11 +244,11 @@
           </div>
         </div>
 
-        <!-- 選中日期的獨立紀錄明細面板（支援補打卡與編輯/刪除） -->
-    <div id="selected-day-details" class="mt-3 pt-3 border-t-2 border-dashed border-duo-gray"></div>
-  </section>
+        <!-- 選中日期的獨立紀錄明細面板 -->
+        <div id="selected-day-details" class="mt-3 pt-3 border-t-2 border-dashed border-duo-gray"></div>
+      </section>
 
-  <!-- 管理按鈕群 -->
+      <!-- 管理按鈕群 -->
       <section class="grid grid-cols-2 gap-2.5">
         <button onclick="openManagerModal()" class="duo-btn bg-duo-green hover:bg-lime-500 text-white font-black py-3 px-3.5 rounded-2xl border-b-4 border-duo-greenDark flex items-center justify-center gap-1.5 text-xs sm:text-sm shadow-sm">
           <span>✏️</span> 輸入 / 更改目標
@@ -309,7 +309,7 @@
 
       <div class="my-4 bg-duo-bg p-4 rounded-2xl border-2 border-duo-gray space-y-3">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-black text-duo-text">本次實際完成量</span>
+          <span class="text-xs font-black text-duo-text">本次新增完成量（同日將自動累加）</span>
           <span id="modal-multiplier-tag" class="bg-duo-greenLight text-duo-greenDark text-xs font-black px-2.5 py-0.5 rounded-full">1.0x 剛好達標</span>
         </div>
 
@@ -329,19 +329,19 @@
             </div>
           </div>
           <div class="bg-amber-50 border-2 border-amber-200 rounded-xl px-3 py-2 text-center shrink-0">
-            <div class="text-[10px] font-extrabold text-amber-600">預計獲得</div>
+            <div class="text-[10px] font-extrabold text-amber-600">本次獲得</div>
             <div class="font-black text-sm text-amber-600">+<span id="modal-calc-xp">20</span> XP</div>
             <div class="text-[10px] font-black text-duo-purpleDark">+1 🪙代幣</div>
           </div>
         </div>
 
         <div>
-          <input id="modal-checkin-note" type="text" placeholder="寫一句今天的小心得（選填）" class="w-full bg-white border-2 border-duo-gray focus:border-duo-blue rounded-xl px-3 py-2 text-xs font-bold text-duo-text outline-none" />
+          <input id="modal-checkin-note" type="text" placeholder="寫一句今天的小心得（選填，將自動合併保留）" class="w-full bg-white border-2 border-duo-gray focus:border-duo-blue rounded-xl px-3 py-2 text-xs font-bold text-duo-text outline-none" />
         </div>
       </div>
 
       <div class="flex flex-col gap-2.5">
-        <button id="modal-complete-btn" onclick="completeCurrentNode()" class="duo-btn w-full bg-duo-green hover:bg-lime-500 text-white font-black text-base py-3.5 rounded-2xl border-b-4 border-duo-greenDark shadow-sm">🎉 完成打卡！開啟小獎勵</button>
+        <button id="modal-complete-btn" onclick="completeCurrentNode()" class="duo-btn w-full bg-duo-green hover:bg-lime-500 text-white font-black text-base py-3.5 rounded-2xl border-b-4 border-duo-greenDark shadow-sm">🎉 完成打卡！領取經驗值與代幣</button>
         <div class="grid grid-cols-2 gap-2">
           <button onclick="editFromNodeModal()" class="duo-btn bg-white hover:bg-gray-50 text-duo-text font-extrabold text-xs py-2.5 rounded-xl border-2 border-b-4 border-duo-gray">✏️ 修改此目標</button>
           <button id="modal-toggle-status-btn" onclick="toggleNodeCompletedState()" class="duo-btn bg-white hover:bg-gray-50 text-duo-muted font-extrabold text-xs py-2.5 rounded-xl border-2 border-b-4 border-duo-gray">重設關卡狀態</button>
@@ -362,7 +362,7 @@
 
       <div class="space-y-3 my-3">
         <div>
-          <label class="block text-xs font-black text-duo-muted mb-1">實際完成數量</label>
+          <label class="block text-xs font-black text-duo-muted mb-1">實際完成總數量</label>
           <input id="edit-entry-actual" type="number" min="0.1" step="0.5" class="w-full bg-duo-bg border-2 border-duo-gray focus:border-duo-blue rounded-xl px-3 py-2 text-sm font-black text-duo-text outline-none" />
         </div>
         <div>
@@ -565,7 +565,7 @@
       <div class="space-y-3 mb-4">
         <div>
           <label class="block text-xs font-black text-duo-muted mb-1">GitHub 使用者名稱 (Username)</label>
-          <input id=" gh-user" type="text" placeholder="例如：Yanyu383" class="w-full bg-duo-bg border-2 border-duo-gray focus:border-duo-blue rounded-xl px-3.5 py-2 text-xs font-bold text-duo-text outline-none" />
+          <input id="gh-user" type="text" placeholder="例如：Yanyu383" class="w-full bg-duo-bg border-2 border-duo-gray focus:border-duo-blue rounded-xl px-3.5 py-2 text-xs font-bold text-duo-text outline-none" />
         </div>
         <div>
           <label class="block text-xs font-black text-duo-muted mb-1">倉庫名稱 (Repository Name)</label>
@@ -588,6 +588,12 @@
         </button>
         <button onclick="pullFromGitHub()" class="duo-btn bg-duo-blue text-white font-black text-xs py-3 rounded-xl border-b-4 border-duo-blueDark flex items-center justify-center gap-1">
           <span>📥</span> 從 GitHub 載入
+        </button>
+      </div>
+
+      <div class="mb-3">
+        <button onclick="forceMergeAllHistory()" class="duo-btn w-full bg-amber-50 hover:bg-amber-100 text-amber-800 border-2 border-b-4 border-amber-300 font-black text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5">
+          <span>🔗</span> 立即自動合併所有歷史重複紀錄
         </button>
       </div>
 
@@ -669,9 +675,8 @@
     let selectedWallFilter = 'ALL';
     let selectedWallDate = getTodayStr(0);
 
-    // 日曆檢視的當前年份與月份
     let wallYear = new Date().getFullYear();
-    let wallMonth = new Date().getMonth(); // 0-11
+    let wallMonth = new Date().getMonth();
 
     function getTodayStr(offsetDays = 0) {
       const d = new Date();
@@ -682,6 +687,67 @@
       return `${yyyy}-${mm}-${dd}`;
     }
 
+    // 自動掃描並合併「同一天、同一目標（或相同名稱）」的舊紀錄
+    function mergeDuplicateEntriesInHistory(targetState) {
+      if (!targetState || !targetState.checkInHistory) return false;
+      let hasMergedAny = false;
+
+      Object.keys(targetState.checkInHistory).forEach(dateStr => {
+        const dayRec = targetState.checkInHistory[dateStr];
+        if (!dayRec || !Array.isArray(dayRec.entries) || dayRec.entries.length <= 1) return;
+
+        const mergedList = [];
+        const mapByKey = {};
+
+        dayRec.entries.forEach(entry => {
+          if (entry.goalId === 'MANUAL') {
+            mergedList.push(entry);
+            return;
+          }
+
+          // 以 goalId 為主（若 goalId 不同但標題完全一樣也一併整併）
+          const key = entry.goalId || entry.goalTitle;
+          if (!mapByKey[key]) {
+            const copy = { ...entry };
+            mapByKey[key] = copy;
+            mergedList.push(copy);
+          } else {
+            hasMergedAny = true;
+            const target = mapByKey[key];
+            target.actualAmount = Number(((Number(target.actualAmount) || 0) + (Number(entry.actualAmount) || 0)).toFixed(2));
+            const baseAmt = Number(target.baseAmount) || Number(entry.baseAmount) || 1;
+            target.multiplier = Number((target.actualAmount / baseAmt).toFixed(1));
+            target.xp = (Number(target.xp) || 0) + (Number(entry.xp) || 0);
+            if (entry.time && (!target.time || entry.time > target.time)) {
+              target.time = entry.time;
+            }
+            if (entry.note && entry.note !== '補登紀錄') {
+              if (!target.note || target.note === '補登紀錄') {
+                target.note = entry.note;
+              } else if (!target.note.includes(entry.note)) {
+                target.note = `${target.note} / ${entry.note}`;
+              }
+            }
+          }
+        });
+
+        dayRec.entries = mergedList;
+      });
+
+      return hasMergedAny;
+    }
+
+    function forceMergeAllHistory() {
+      const merged = mergeDuplicateEntriesInHistory(state);
+      saveState();
+      renderAll();
+      if (merged) {
+        showToast('🔗 已成功將同日同目標的舊紀錄全部合併！', 'success');
+      } else {
+        showToast('✅ 目前所有紀錄都已經是最新合併狀態囉！', 'info');
+      }
+    }
+
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -689,7 +755,11 @@
           return JSON.parse(JSON.stringify(DEFAULT_STATE));
         }
         const parsed = JSON.parse(raw);
-        return { ...DEFAULT_STATE, ...parsed };
+        const mergedState = { ...DEFAULT_STATE, ...parsed };
+        if (mergeDuplicateEntriesInHistory(mergedState)) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedState));
+        }
+        return mergedState;
       } catch (e) {
         return JSON.parse(JSON.stringify(DEFAULT_STATE));
       }
@@ -701,18 +771,13 @@
       } catch (e) {}
     }
 
-    // 自動依據「今天」的打卡紀錄同步更新每個關卡的完成狀態（皇冠）
     function syncGoalsCompletionWithToday() {
       const today = getTodayStr(0);
       const todayEntries = state.checkInHistory[today]?.entries || [];
       const completedGoalIds = new Set(todayEntries.map(e => e.goalId));
 
       state.goals.forEach(goal => {
-        if (completedGoalIds.has(goal.id)) {
-          goal.completed = true;
-        } else {
-          goal.completed = false;
-        }
+        goal.completed = completedGoalIds.has(goal.id);
       });
     }
 
@@ -898,10 +963,9 @@
       const grid = document.getElementById('checkin-wall-grid');
       grid.innerHTML = '';
 
-      // 計算當月第一天是星期幾 (0=週日, 1=週一 ... 6=週六)
       const firstDayObj = new Date(wallYear, wallMonth, 1);
       let startDayOfWeek = firstDayObj.getDay();
-      startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1; // 轉成 0=週一 到 6=週日
+      startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
 
       const totalDaysInMonth = new Date(wallYear, wallMonth + 1, 0).getDate();
       const todayStr = getTodayStr(0);
@@ -919,14 +983,12 @@
       });
       document.getElementById('total-active-days').textContent = `此月份累積達標：${activeDaysCount} 天`;
 
-      // 補足前面空白格
       for (let i = 0; i < startDayOfWeek; i++) {
         const emptyCell = document.createElement('div');
         emptyCell.className = 'aspect-square rounded-xl bg-gray-50/30 border border-dashed border-gray-100';
         grid.appendChild(emptyCell);
       }
 
-      // 渲染當月每一天
       for (let day = 1; day <= totalDaysInMonth; day++) {
         const mm = String(wallMonth + 1).padStart(2, '0');
         const dd = String(day).padStart(2, '0');
@@ -1031,7 +1093,6 @@
       `;
     }
 
-    // 開啟補打卡 Modal (支援自由選擇所有目標)
     function openBackfillModal(dateStr) {
       if (state.goals.length === 0) {
         showToast('請先新增至少一個目標關卡！', 'error');
@@ -1039,7 +1100,6 @@
       }
       playChime('click');
 
-      // 顯示目標選單
       const selectBox = document.getElementById('backfill-goal-select-box');
       const selectEl = document.getElementById('modal-backfill-goal-select');
       selectBox.classList.remove('hidden');
@@ -1081,7 +1141,6 @@
       document.getElementById('modal-complete-btn').textContent = `🎉 確認補登至 ${dateStr}！`;
     }
 
-    // 刪除單筆紀錄（自動連動扣除 XP、代幣，並同步更新關卡狀態）
     function deleteCheckInEntry(dateStr, entryId) {
       const record = state.checkInHistory[dateStr];
       if (!record || !Array.isArray(record.entries)) return;
@@ -1232,7 +1291,6 @@
       activeModalNodeId = goalId;
       playChime('click');
 
-      // 隱藏補登選單（一般打卡不需要）
       document.getElementById('backfill-goal-select-box').classList.add('hidden');
 
       const baseAmt = Number(goal.baseAmount) || 5;
@@ -1244,7 +1302,7 @@
       document.getElementById('modal-base-amount-label').textContent = `${baseAmt} ${unitStr}`;
       document.getElementById('modal-unit-label').textContent = unitStr;
       document.getElementById('modal-checkin-note').value = '';
-      document.getElementById('modal-target-date').value = ''; // 清空代表預設打卡今天
+      document.getElementById('modal-target-date').value = '';
 
       setCheckInMultiplier(1);
 
@@ -1316,7 +1374,6 @@
       const multiplier = Number((actualAmount / baseAmt).toFixed(1));
       const earnedXp = Math.round(baseXp * Math.min(4, Math.max(1, multiplier)));
 
-      // 檢查是否為指定特定日期的補打卡
       const targetDateInput = document.getElementById('modal-target-date').value;
       const targetDate = targetDateInput || getTodayStr(0);
 
@@ -1355,7 +1412,7 @@
       renderAll();
       triggerCelebration(multiplier > 1);
 
-      showToast(`🎉 打卡成功 (${targetDate})！+${earnedXp} XP、+${earnedTokens} 🪙！`, 'success');
+      showToast(`🎉 打卡成功 (${targetDate})！已自動合併累計 +${earnedXp} XP、+${earnedTokens} 🪙！`, 'success');
     }
 
     function addCheckInEntryToDate(dateStr, entry) {
@@ -1366,24 +1423,23 @@
         state.checkInHistory[dateStr].entries = [];
       }
 
-      // 檢查同一天是否已有相同目標的紀錄（排除隨手打卡 MANUAL）
       const existingEntry = entry.goalId !== 'MANUAL'
-        ? state.checkInHistory[dateStr].entries.find(e => e.goalId === entry.goalId)
+        ? state.checkInHistory[dateStr].entries.find(e => e.goalId === entry.goalId || e.goalTitle === entry.goalTitle)
         : null;
 
       if (existingEntry) {
-        // 合併數量與計算新的倍數、XP
-        existingEntry.actualAmount = Number((existingEntry.actualAmount + entry.actualAmount).toFixed(2));
-        const baseAmt = existingEntry.baseAmount || entry.baseAmount || 1;
+        existingEntry.actualAmount = Number(((Number(existingEntry.actualAmount) || 0) + (Number(entry.actualAmount) || 0)).toFixed(2));
+        const baseAmt = Number(existingEntry.baseAmount) || Number(entry.baseAmount) || 1;
         existingEntry.multiplier = Number((existingEntry.actualAmount / baseAmt).toFixed(1));
-        existingEntry.xp = (existingEntry.xp || 0) + (entry.xp || 0);
+        existingEntry.xp = (Number(existingEntry.xp) || 0) + (Number(entry.xp) || 0);
         existingEntry.time = entry.time;
 
-        // 合併心得備註（避免重複顯示相同文字）
-        if (entry.note) {
-          existingEntry.note = existingEntry.note
-            ? `${existingEntry.note} / ${entry.note}`
-            : entry.note;
+        if (entry.note && entry.note !== '補登紀錄') {
+          if (!existingEntry.note || existingEntry.note === '補登紀錄') {
+            existingEntry.note = entry.note;
+          } else if (!existingEntry.note.includes(entry.note)) {
+            existingEntry.note = `${existingEntry.note} / ${entry.note}`;
+          }
         }
       } else {
         state.checkInHistory[dateStr].entries.unshift(entry);
@@ -1938,10 +1994,11 @@
         if (!Array.isArray(parsed.goals)) throw new Error('存檔格式無效');
 
         state = { ...DEFAULT_STATE, ...parsed };
+        mergeDuplicateEntriesInHistory(state);
         saveState();
         closeModal('backup-modal');
         renderAll();
-        showToast('🎊 成功從 GitHub 載入最新進度！', 'success');
+        showToast('🎊 成功從 GitHub 載入並自動合併最新進度！', 'success');
       } catch (e) {
         showToast(`❌ 載入失敗: ${e.message}`, 'error');
       }
@@ -2020,7 +2077,7 @@
       completeCurrentNode, toggleNodeCompletedState, editFromNodeModal, openBackupModal, copyBackupJSON,
       downloadBackupFile, confirmResetAll, openModal, closeModal,
       deleteCheckInEntry, openEditEntryModal, saveEditedEntry, pushToGitHub, pullFromGitHub,
-      changeWallMonth, openBackfillModal, onBackfillGoalSelectChange
+      changeWallMonth, openBackfillModal, onBackfillGoalSelectChange, forceMergeAllHistory
     });
 
     ['node-modal', 'manager-modal', 'arcade-modal', 'backup-modal', 'edit-entry-modal'].forEach(id => {
